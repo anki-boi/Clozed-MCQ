@@ -1,0 +1,48 @@
+<div class="cmcq-check" id="cmcq-check"></div>
+
+<div class="question" id="cmcq-question">{{cloze:Text}}</div>
+
+{{#Back Extra}}
+<div class="extra">{{Back Extra}}</div>
+{{/Back Extra}}
+
+<script>
+/* @PERSISTENCE@ */
+</script>
+
+<script>
+/* @CORE@ */
+</script>
+
+<script>
+(function () {
+  var C = window.ClozedMCQ;
+  window.ClozedMCQActive = null;
+  var question = document.getElementById('cmcq-question');
+  var check = document.getElementById('cmcq-check');
+  if (!question) return;
+
+  C.cleanVisible(question);
+  var spans = Array.prototype.slice.call(question.querySelectorAll('.cloze'));
+  var saved = C.load();
+  if (!saved || saved.sig !== C.signature(spans.map(function (s) { return s.innerHTML; }))) return;
+
+  // Only picked blanks are graded; untouched blanks were recalled and the user grades those
+  var picked = 0, allRight = true;
+  spans.forEach(function (span, i) {
+    var p = saved.picks[i];
+    if (!p) return;
+    picked++;
+    if (p.correct) { span.classList.add('cmcq-ok'); return; }
+    allRight = false;
+    span.classList.add('cmcq-missed');
+    var wrong = document.createElement('s');
+    wrong.className = 'cmcq-wrong';
+    wrong.innerHTML = p.html;
+    span.parentNode.insertBefore(wrong, span);
+  });
+  if (!picked || !check) return;
+  check.textContent = allRight ? 'Correct' : 'Wrong';
+  check.className = 'cmcq-check ' + (allRight ? 'success' : 'error');
+})();
+</script>

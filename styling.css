@@ -1,0 +1,113 @@
+/* ===================================================================
+   Clozed MCQ styling
+   Colours live in the variables below; night mode swaps them.
+   =================================================================== */
+.card {
+  --cloze: blue;
+  --choice: #c2410c;                       /* blank with choices behind it */
+  --choice-glow: rgba(234, 88, 12, 0.45);
+  --ok: #5f9e33;
+  --wrong: #F04A32;
+  --missed: #b59a00;
+  --pill: rgba(0, 0, 0, 0.06);
+  --pill-hover: rgba(0, 0, 0, 0.10);
+  --muted: #777;
+  --line: #ddd;
+
+  text-align: center;
+  margin: 0;
+  padding: 16px 12px 24px;
+  font-family: Menlo, Baskerville, sans-serif;
+  font-size: clamp(18px, 3vmin, 25px);
+  color: black;
+  background-color: white;
+}
+
+.card.nightMode, .card.night_mode, .nightMode .card, .night_mode .card {
+  --cloze: lightblue;
+  --choice: #fb923c;
+  --choice-glow: rgba(251, 146, 60, 0.5);
+  --ok: #8AC05E;
+  --missed: #F4E45F;
+  --pill: rgba(255, 255, 255, 0.07);
+  --pill-hover: rgba(255, 255, 255, 0.12);
+  --muted: #999;
+  --line: #444;
+  color: white;
+  background-color: #2f2f31;
+}
+
+.question {
+  font-size: clamp(20px, 4vmin, 30px);
+  line-height: 1.7;
+  padding: 2vh 1vw;
+  word-break: break-word;
+}
+
+.cloze { font-weight: bold; color: var(--cloze); }
+
+/* --- A blank with choices: own colour, gentle pulse, generous tap area --- */
+.cloze.has-choices {
+  color: var(--choice);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: -2px 0;
+  -webkit-tap-highlight-color: transparent;
+  animation: cmcq-pulse 2.4s ease-in-out infinite;
+}
+.cloze.has-choices.open {
+  animation: none;
+  background: var(--pill-hover);
+  box-shadow: 0 0 0 2px var(--choice-glow);
+}
+.cloze.has-choices.picked {
+  animation: none;
+  border-bottom: 2px solid var(--choice);
+  border-radius: 6px 6px 0 0;
+}
+@keyframes cmcq-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 10px 2px var(--choice-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cloze.has-choices { animation: none; box-shadow: 0 0 6px 1px var(--choice-glow); }
+}
+
+/* --- Choices panel --- */
+.cmcq-panel { margin: 1vh auto 0; max-width: 640px; }
+.cmcq-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: system-ui, sans-serif; }
+.cmcq-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.cmcq-options button {
+  font: inherit;
+  font-size: clamp(15px, 3vmin, 20px);
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--pill);
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmcq-options button:hover { background: var(--pill-hover); }
+.cmcq-options button kbd { font: 11px/1 system-ui, sans-serif; opacity: .55; margin-right: 6px; }
+.cmcq-options.rows { flex-direction: column; align-items: stretch; }
+.cmcq-options.rows button { text-align: left; border-radius: 12px; }
+
+/* --- Answer side --- */
+.cloze.cmcq-ok { color: var(--ok); }
+.cloze.cmcq-missed { color: var(--missed); }
+s.cmcq-wrong { color: var(--wrong); font-weight: bold; margin-right: 6px; }
+.cmcq-check { position: fixed; top: 0; left: 0; padding: 2px 10px; font-weight: bold; font-size: 16px; }
+.cmcq-check.success { color: var(--ok); }
+.cmcq-check.error { color: var(--wrong); }
+
+.extra {
+  font-size: clamp(14px, 2.5vmin, 18px);
+  margin: 2vh auto 0;
+  padding-top: 1.5vh;
+  border-top: 1px solid var(--line);
+  max-width: 640px;
+}
+
+img { display: block; max-width: 100%; margin: 10px auto; }

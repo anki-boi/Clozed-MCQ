@@ -1,0 +1,121 @@
+<div class="question" id="cmcq-question">{{cloze:Text}}</div>
+<div class="cmcq-panel" id="cmcq-panel"></div>
+
+<script>
+/* @PERSISTENCE@ */
+</script>
+
+<script>
+/* @CORE@ */
+</script>
+
+<script>
+(function () {
+  // ===================================================================
+  // --- CONFIGURATION ---
+  // ===================================================================
+
+  // Keys that open the next / previous blank's choices. Use lowercase.
+  var KEYS_NEXT = ['tab', 'arrowright', 'c', 'q'];
+  var KEYS_PREV = ['arrowleft'];
+  // Key that closes the open choices. Number keys 1 to 9 pick a choice.
+  var KEYS_CLOSE = ['escape'];
+
+  // ===================================================================
+
+  var C = window.ClozedMCQ;
+  var question = document.getElementById('cmcq-question');
+  var panel = document.getElementById('cmcq-panel');
+  window.ClozedMCQActive = null;
+  if (!question || !panel) return;
+
+  var blanks = C.readFront(question);
+  var state = {
+    sig: C.signature(blanks.map(function (b) { return b.answer; })),
+    picks: blanks.map(function () { return null; })
+  };
+  var current = null, last = null;
+  C.save(state);
+
+  var choosable = [];
+  blanks.forEach(function (b, i) {
+    if (!b.options) return;
+    choosable.push(i);
+    b.span.classList.add('has-choices');
+    b.span.setAttribute('role', 'button');
+    b.span.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (current === i) close(); else open(i);
+    });
+  });
+  if (!choosable.length) return;
+
+  function open(i) {
+    var b = blanks[i];
+    current = i;
+    blanks.forEach(function (o, j) { o.span.classList.toggle('open', i === j); });
+    var label = blanks.length > 1 ? 'Blank ' + (i + 1) + ' of ' + blanks.length : 'Choose';
+    panel.innerHTML = '<div class="cmcq-label">' + label + '</div>' +
+      '<div class="cmcq-options' + (C.isLong(b.options) ? ' rows' : '') + '">' +
+      b.options.map(function (o, k) {
+        return '<button type="button" data-k="' + k + '">' + (k < 9 ? '<kbd>' + (k + 1) + '</kbd>' : '') + o.html + '</button>';
+      }).join('') + '</div>';
+    panel.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        pick(+btn.getAttribute('data-k'));
+      });
+    });
+  }
+
+  function close() {
+    if (current !== null) last = current;
+    current = null;
+    blanks.forEach(function (o) { o.span.classList.remove('open'); });
+    panel.innerHTML = '';
+  }
+
+  // Picking fills the blank and closes; the next blank stays closed so it can be recalled
+  function pick(k) {
+    if (current === null) return;
+    var b = blanks[current], o = b.options[k];
+    if (!o) return;
+    state.picks[current] = { html: o.html, correct: o.correct };
+    b.span.innerHTML = o.html;
+    b.span.classList.add('picked');
+    C.save(state);
+    close();
+  }
+
+  // Moves on from the open blank, or from the last one used once it has closed
+  function step(dir) {
+    var at = choosable.indexOf(current !== null ? current : last);
+    var next = at < 0 ? (dir > 0 ? 0 : choosable.length - 1) : (at + dir + choosable.length) % choosable.length;
+    open(choosable[next]);
+  }
+
+  window.ClozedMCQActive = {
+    isOpen: function () { return current !== null; },
+    pick: pick, close: close, step: step,
+    keys: { next: KEYS_NEXT, prev: KEYS_PREV, close: KEYS_CLOSE }
+  };
+
+  // Anki desktop keeps one page between cards, so the key handler is installed once
+  // and always talks to whichever card is showing.
+  if (!window.ClozedMCQKeys) {
+    window.ClozedMCQKeys = true;
+    document.addEventListener('keydown', function (e) {
+      var c = window.ClozedMCQActive;
+      if (!c || e.ctrlKey || e.metaKey || e.altKey) return;
+      var key = e.key.toLowerCase();
+      if (/^[1-9]$/.test(key) && c.isOpen()) { c.pick(+key - 1); e.preventDefault(); return; }
+      if (c.keys.close.indexOf(key) >= 0 && c.isOpen()) { c.close(); return; }
+      var back = c.keys.prev.indexOf(key) >= 0 || (key === 'tab' && e.shiftKey);
+      var fwd = !back && c.keys.next.indexOf(key) >= 0;
+      if (!back && !fwd) return;
+      e.preventDefault();
+      c.step(back ? -1 : 1);
+    });
+  }
+})();
+</script>

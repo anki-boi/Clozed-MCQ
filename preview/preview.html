@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clozed MCQ Preview</title>
+<style>
+  :root { --page: #f3f3f1; --ink: #1d1d1b; --muted: #6b6b66; --line: #dcdcd6; --panel: #fff; --accent: #3b5bdb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.lead { margin: 0 0 12px; color: var(--muted); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  select, textarea { width: 100%; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: inherit; }
+  textarea { min-height: 150px; resize: vertical; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  button { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .viewer { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .status { font-size: 12px; color: var(--muted); }
+  iframe { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+  iframe.phone { width: 390px; max-width: 100%; height: 700px; align-self: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Clozed MCQ preview</h1>
+    <p class="lead">Runs the built <code>front.html</code>, <code>back.html</code> and <code>styling.css</code> the way Anki desktop does: one page, card HTML swapped in, scripts re-run. Cloze HTML is simulated to match Anki's output.</p>
+    <label for="note">Sample note</label>
+    <select id="note"></select>
+    <label for="text">Text</label>
+    <textarea id="text" spellcheck="false"></textarea>
+    <label for="extra">Back Extra</label>
+    <textarea id="extra" spellcheck="false" style="min-height:60px"></textarea>
+    <label for="ord">Card</label>
+    <select id="ord"></select>
+    <div class="row">
+      <button class="primary" id="showFront">Front</button>
+      <button id="showBack">Show answer</button>
+    </div>
+    <div class="row">
+      <button id="night">Night mode</button>
+      <button id="phone">Phone width</button>
+    </div>
+  </div>
+  <div class="viewer">
+    <div class="status" id="status"></div>
+    <iframe id="anki" title="Card preview"></iframe>
+  </div>
+</div>
+
+<script>
+const TEMPLATES = {"front": "<div class=\"question\" id=\"cmcq-question\">{{cloze:Text}}<\/div>\n<div class=\"cmcq-panel\" id=\"cmcq-panel\"><\/div>\n\n<script>\n// anki-persistence v0.5.3 by Simon Lammer (MIT): https://github.com/SimonLammer/anki-persistence\nif(void 0===window.Persistence){var _persistenceKey=\"github.com/SimonLammer/anki-persistence/\",_defaultKey=\"_default\";if(window.Persistence_sessionStorage=function(){var e=!1;try{\"object\"==typeof window.sessionStorage&&(e=!0,this.clear=function(){for(var e=0;e<sessionStorage.length;e++){var t=sessionStorage.key(e);0==t.indexOf(_persistenceKey)&&(sessionStorage.removeItem(t),e--)}},this.setItem=function(e,t){void 0==t&&(t=e,e=_defaultKey),sessionStorage.setItem(_persistenceKey+e,JSON.stringify(t))},this.getItem=function(e){return void 0==e&&(e=_defaultKey),JSON.parse(sessionStorage.getItem(_persistenceKey+e))},this.removeItem=function(e){void 0==e&&(e=_defaultKey),sessionStorage.removeItem(_persistenceKey+e)})}catch(e){}this.isAvailable=function(){return e}},window.Persistence_windowKey=function(e){var t=window[e],i=!1;\"object\"==typeof t&&(i=!0,this.clear=function(){t[_persistenceKey]={}},this.setItem=function(e,i){void 0==i&&(i=e,e=_defaultKey),t[_persistenceKey][e]=i},this.getItem=function(e){return void 0==e&&(e=_defaultKey),void 0==t[_persistenceKey][e]?null:t[_persistenceKey][e]},this.removeItem=function(e){void 0==e&&(e=_defaultKey),delete t[_persistenceKey][e]},void 0==t[_persistenceKey]&&this.clear()),this.isAvailable=function(){return i}},window.Persistence=new Persistence_sessionStorage,Persistence.isAvailable()||(window.Persistence=new Persistence_windowKey(\"py\")),!Persistence.isAvailable()){var titleStartIndex=window.location.toString().indexOf(\"title\"),titleContentIndex=window.location.toString().indexOf(\"main\",titleStartIndex);titleStartIndex>0&&titleContentIndex>0&&titleContentIndex-titleStartIndex<10&&(window.Persistence=new Persistence_windowKey(\"qt\"))}}\n<\/script>\n\n<script>\n// Clozed MCQ core: shared by the front and back templates.\n// Reads the cloze HTML Anki renders, pulls each blank's \";;\" choice list,\n// and strips those lists from everything the user can see.\nwindow.ClozedMCQ = (function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Separates the answer from its distractors inside a cloze:\n  // {{c1::Metformin;;Phenformin;;Buformin}}\n  var LIST = ';;';\n\n  // Options longer than this many characters stack as full-width rows.\n  var LONG_OPTION = 24;\n\n  // Key used to carry the picks from the front to the back.\n  var STORE_KEY = 'clozed-mcq';\n\n  // ===================================================================\n\n  function isCloze(n) {\n    return n.nodeType === 1 && n.matches('.cloze, .cloze-inactive');\n  }\n\n  function textOf(html) {\n    var d = document.createElement('div');\n    d.innerHTML = html;\n    return d.textContent;\n  }\n\n  function norm(html) {\n    return textOf(html).replace(/\\s+/g, ' ').trim().toLowerCase();\n  }\n\n  // First text node holding the list marker in this cloze's own content,\n  // skipping nested clozes (they own their own lists)\n  function firstListText(root) {\n    var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {\n      acceptNode: function (n) { return isCloze(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }\n    });\n    for (var n = walker.nextNode(); n; n = walker.nextNode()) {\n      if (n.nodeType === 3 && n.data.indexOf(LIST) >= 0) return n;\n    }\n    return null;\n  }\n\n  // Removes the cloze's own list from the DOM and returns its items as HTML\n  function cutList(root) {\n    var t = firstListText(root);\n    if (!t) return [];\n    var range = document.createRange();\n    range.setStart(t, t.data.indexOf(LIST));\n    range.setEnd(root, root.childNodes.length);\n    var box = document.createElement('div');\n    box.appendChild(range.extractContents());\n    return box.innerHTML.split(LIST)\n      .map(function (s) { return s.trim(); })\n      .filter(function (s) { return norm(s) !== ''; });\n  }\n\n  // Every blank shown as text (other clozes, or the answer side) loses its list\n  function cleanVisible(root) {\n    root.querySelectorAll('.cloze-inactive, .cloze:not([data-cloze])').forEach(cutList);\n  }\n\n  // Front side: the active blank's answer and distractors\n  function readActive(span) {\n    var box = document.createElement('div');\n    box.innerHTML = span.getAttribute('data-cloze');\n    var distractors = cutList(box);\n    box.querySelectorAll('.cloze, .cloze-inactive').forEach(function (s) {\n      cutList(s);\n      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);\n      s.remove();\n    });\n\n    // Hint written before the list: Anki put \"hint;;a;;b\" in the brackets\n    var m = span.innerHTML.match(/^\\[([\\s\\S]*)\\]$/);\n    if (m && m[1].indexOf(LIST) >= 0) {\n      var parts = m[1].split(LIST).map(function (s) { return s.trim(); });\n      span.innerHTML = '[' + (parts[0] || '...') + ']';\n      parts.slice(1).forEach(function (p) { if (p) distractors.push(p); });\n    }\n    return { span: span, answer: box.innerHTML.trim(), distractors: distractors };\n  }\n\n  // A blank with no list of its own borrows the other answers on this card\n  function borrowSiblings(blanks) {\n    blanks.forEach(function (b) {\n      if (b.distractors.length) return;\n      b.distractors = blanks\n        .filter(function (o) { return o !== b && norm(o.answer) !== norm(b.answer); })\n        .map(function (o) { return o.answer; });\n    });\n  }\n\n  function shuffle(a) {\n    for (var i = a.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var t = a[i]; a[i] = a[j]; a[j] = t;\n    }\n    return a;\n  }\n\n  // One option per distinct text; the answer wins over the same text listed as a distractor\n  function buildOptions(blank) {\n    var seen = {}, out = [];\n    function add(html, correct) {\n      var k = norm(html);\n      if (seen[k]) { if (correct) seen[k].correct = true; return; }\n      seen[k] = { html: html, correct: correct };\n      out.push(seen[k]);\n    }\n    add(blank.answer, true);\n    blank.distractors.forEach(function (d) { add(d, false); });\n    return shuffle(out);\n  }\n\n  // Ties saved picks to this exact card so a stale save is never applied\n  function signature(answers) {\n    return answers.map(norm).join('␞');\n  }\n\n  function isLong(options) {\n    return options.some(function (o) { return textOf(o.html).length > LONG_OPTION; });\n  }\n\n  // Front: every active blank with its options; blanks with nothing to offer get none\n  function readFront(question) {\n    var blanks = Array.prototype.map.call(question.querySelectorAll('.cloze[data-cloze]'), readActive);\n    cleanVisible(question);\n    borrowSiblings(blanks);\n    blanks.forEach(function (b) { if (b.distractors.length) b.options = buildOptions(b); });\n    return blanks;\n  }\n\n  function save(data) {\n    if (window.Persistence && Persistence.isAvailable()) Persistence.setItem(STORE_KEY, data);\n  }\n\n  function load() {\n    if (!window.Persistence || !Persistence.isAvailable()) return null;\n    var data = Persistence.getItem(STORE_KEY);\n    Persistence.removeItem(STORE_KEY);\n    return data;\n  }\n\n  return {\n    readFront: readFront, cleanVisible: cleanVisible, signature: signature,\n    isLong: isLong, norm: norm, save: save, load: load\n  };\n})();\n<\/script>\n\n<script>\n(function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Keys that open the next / previous blank's choices. Use lowercase.\n  var KEYS_NEXT = ['tab', 'arrowright', 'c', 'q'];\n  var KEYS_PREV = ['arrowleft'];\n  // Key that closes the open choices. Number keys 1 to 9 pick a choice.\n  var KEYS_CLOSE = ['escape'];\n\n  // ===================================================================\n\n  var C = window.ClozedMCQ;\n  var question = document.getElementById('cmcq-question');\n  var panel = document.getElementById('cmcq-panel');\n  window.ClozedMCQActive = null;\n  if (!question || !panel) return;\n\n  var blanks = C.readFront(question);\n  var state = {\n    sig: C.signature(blanks.map(function (b) { return b.answer; })),\n    picks: blanks.map(function () { return null; })\n  };\n  var current = null, last = null;\n  C.save(state);\n\n  var choosable = [];\n  blanks.forEach(function (b, i) {\n    if (!b.options) return;\n    choosable.push(i);\n    b.span.classList.add('has-choices');\n    b.span.setAttribute('role', 'button');\n    b.span.addEventListener('click', function (e) {\n      e.stopPropagation();\n      if (current === i) close(); else open(i);\n    });\n  });\n  if (!choosable.length) return;\n\n  function open(i) {\n    var b = blanks[i];\n    current = i;\n    blanks.forEach(function (o, j) { o.span.classList.toggle('open', i === j); });\n    var label = blanks.length > 1 ? 'Blank ' + (i + 1) + ' of ' + blanks.length : 'Choose';\n    panel.innerHTML = '<div class=\"cmcq-label\">' + label + '<\/div>' +\n      '<div class=\"cmcq-options' + (C.isLong(b.options) ? ' rows' : '') + '\">' +\n      b.options.map(function (o, k) {\n        return '<button type=\"button\" data-k=\"' + k + '\">' + (k < 9 ? '<kbd>' + (k + 1) + '<\/kbd>' : '') + o.html + '<\/button>';\n      }).join('') + '<\/div>';\n    panel.querySelectorAll('button').forEach(function (btn) {\n      btn.addEventListener('click', function (e) {\n        e.stopPropagation();\n        pick(+btn.getAttribute('data-k'));\n      });\n    });\n  }\n\n  function close() {\n    if (current !== null) last = current;\n    current = null;\n    blanks.forEach(function (o) { o.span.classList.remove('open'); });\n    panel.innerHTML = '';\n  }\n\n  // Picking fills the blank and closes; the next blank stays closed so it can be recalled\n  function pick(k) {\n    if (current === null) return;\n    var b = blanks[current], o = b.options[k];\n    if (!o) return;\n    state.picks[current] = { html: o.html, correct: o.correct };\n    b.span.innerHTML = o.html;\n    b.span.classList.add('picked');\n    C.save(state);\n    close();\n  }\n\n  // Moves on from the open blank, or from the last one used once it has closed\n  function step(dir) {\n    var at = choosable.indexOf(current !== null ? current : last);\n    var next = at < 0 ? (dir > 0 ? 0 : choosable.length - 1) : (at + dir + choosable.length) % choosable.length;\n    open(choosable[next]);\n  }\n\n  window.ClozedMCQActive = {\n    isOpen: function () { return current !== null; },\n    pick: pick, close: close, step: step,\n    keys: { next: KEYS_NEXT, prev: KEYS_PREV, close: KEYS_CLOSE }\n  };\n\n  // Anki desktop keeps one page between cards, so the key handler is installed once\n  // and always talks to whichever card is showing.\n  if (!window.ClozedMCQKeys) {\n    window.ClozedMCQKeys = true;\n    document.addEventListener('keydown', function (e) {\n      var c = window.ClozedMCQActive;\n      if (!c || e.ctrlKey || e.metaKey || e.altKey) return;\n      var key = e.key.toLowerCase();\n      if (/^[1-9]$/.test(key) && c.isOpen()) { c.pick(+key - 1); e.preventDefault(); return; }\n      if (c.keys.close.indexOf(key) >= 0 && c.isOpen()) { c.close(); return; }\n      var back = c.keys.prev.indexOf(key) >= 0 || (key === 'tab' && e.shiftKey);\n      var fwd = !back && c.keys.next.indexOf(key) >= 0;\n      if (!back && !fwd) return;\n      e.preventDefault();\n      c.step(back ? -1 : 1);\n    });\n  }\n})();\n<\/script>\n", "back": "<div class=\"cmcq-check\" id=\"cmcq-check\"><\/div>\n\n<div class=\"question\" id=\"cmcq-question\">{{cloze:Text}}<\/div>\n\n{{#Back Extra}}\n<div class=\"extra\">{{Back Extra}}<\/div>\n{{/Back Extra}}\n\n<script>\n// anki-persistence v0.5.3 by Simon Lammer (MIT): https://github.com/SimonLammer/anki-persistence\nif(void 0===window.Persistence){var _persistenceKey=\"github.com/SimonLammer/anki-persistence/\",_defaultKey=\"_default\";if(window.Persistence_sessionStorage=function(){var e=!1;try{\"object\"==typeof window.sessionStorage&&(e=!0,this.clear=function(){for(var e=0;e<sessionStorage.length;e++){var t=sessionStorage.key(e);0==t.indexOf(_persistenceKey)&&(sessionStorage.removeItem(t),e--)}},this.setItem=function(e,t){void 0==t&&(t=e,e=_defaultKey),sessionStorage.setItem(_persistenceKey+e,JSON.stringify(t))},this.getItem=function(e){return void 0==e&&(e=_defaultKey),JSON.parse(sessionStorage.getItem(_persistenceKey+e))},this.removeItem=function(e){void 0==e&&(e=_defaultKey),sessionStorage.removeItem(_persistenceKey+e)})}catch(e){}this.isAvailable=function(){return e}},window.Persistence_windowKey=function(e){var t=window[e],i=!1;\"object\"==typeof t&&(i=!0,this.clear=function(){t[_persistenceKey]={}},this.setItem=function(e,i){void 0==i&&(i=e,e=_defaultKey),t[_persistenceKey][e]=i},this.getItem=function(e){return void 0==e&&(e=_defaultKey),void 0==t[_persistenceKey][e]?null:t[_persistenceKey][e]},this.removeItem=function(e){void 0==e&&(e=_defaultKey),delete t[_persistenceKey][e]},void 0==t[_persistenceKey]&&this.clear()),this.isAvailable=function(){return i}},window.Persistence=new Persistence_sessionStorage,Persistence.isAvailable()||(window.Persistence=new Persistence_windowKey(\"py\")),!Persistence.isAvailable()){var titleStartIndex=window.location.toString().indexOf(\"title\"),titleContentIndex=window.location.toString().indexOf(\"main\",titleStartIndex);titleStartIndex>0&&titleContentIndex>0&&titleContentIndex-titleStartIndex<10&&(window.Persistence=new Persistence_windowKey(\"qt\"))}}\n<\/script>\n\n<script>\n// Clozed MCQ core: shared by the front and back templates.\n// Reads the cloze HTML Anki renders, pulls each blank's \";;\" choice list,\n// and strips those lists from everything the user can see.\nwindow.ClozedMCQ = (function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Separates the answer from its distractors inside a cloze:\n  // {{c1::Metformin;;Phenformin;;Buformin}}\n  var LIST = ';;';\n\n  // Options longer than this many characters stack as full-width rows.\n  var LONG_OPTION = 24;\n\n  // Key used to carry the picks from the front to the back.\n  var STORE_KEY = 'clozed-mcq';\n\n  // ===================================================================\n\n  function isCloze(n) {\n    return n.nodeType === 1 && n.matches('.cloze, .cloze-inactive');\n  }\n\n  function textOf(html) {\n    var d = document.createElement('div');\n    d.innerHTML = html;\n    return d.textContent;\n  }\n\n  function norm(html) {\n    return textOf(html).replace(/\\s+/g, ' ').trim().toLowerCase();\n  }\n\n  // First text node holding the list marker in this cloze's own content,\n  // skipping nested clozes (they own their own lists)\n  function firstListText(root) {\n    var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {\n      acceptNode: function (n) { return isCloze(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }\n    });\n    for (var n = walker.nextNode(); n; n = walker.nextNode()) {\n      if (n.nodeType === 3 && n.data.indexOf(LIST) >= 0) return n;\n    }\n    return null;\n  }\n\n  // Removes the cloze's own list from the DOM and returns its items as HTML\n  function cutList(root) {\n    var t = firstListText(root);\n    if (!t) return [];\n    var range = document.createRange();\n    range.setStart(t, t.data.indexOf(LIST));\n    range.setEnd(root, root.childNodes.length);\n    var box = document.createElement('div');\n    box.appendChild(range.extractContents());\n    return box.innerHTML.split(LIST)\n      .map(function (s) { return s.trim(); })\n      .filter(function (s) { return norm(s) !== ''; });\n  }\n\n  // Every blank shown as text (other clozes, or the answer side) loses its list\n  function cleanVisible(root) {\n    root.querySelectorAll('.cloze-inactive, .cloze:not([data-cloze])').forEach(cutList);\n  }\n\n  // Front side: the active blank's answer and distractors\n  function readActive(span) {\n    var box = document.createElement('div');\n    box.innerHTML = span.getAttribute('data-cloze');\n    var distractors = cutList(box);\n    box.querySelectorAll('.cloze, .cloze-inactive').forEach(function (s) {\n      cutList(s);\n      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);\n      s.remove();\n    });\n\n    // Hint written before the list: Anki put \"hint;;a;;b\" in the brackets\n    var m = span.innerHTML.match(/^\\[([\\s\\S]*)\\]$/);\n    if (m && m[1].indexOf(LIST) >= 0) {\n      var parts = m[1].split(LIST).map(function (s) { return s.trim(); });\n      span.innerHTML = '[' + (parts[0] || '...') + ']';\n      parts.slice(1).forEach(function (p) { if (p) distractors.push(p); });\n    }\n    return { span: span, answer: box.innerHTML.trim(), distractors: distractors };\n  }\n\n  // A blank with no list of its own borrows the other answers on this card\n  function borrowSiblings(blanks) {\n    blanks.forEach(function (b) {\n      if (b.distractors.length) return;\n      b.distractors = blanks\n        .filter(function (o) { return o !== b && norm(o.answer) !== norm(b.answer); })\n        .map(function (o) { return o.answer; });\n    });\n  }\n\n  function shuffle(a) {\n    for (var i = a.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var t = a[i]; a[i] = a[j]; a[j] = t;\n    }\n    return a;\n  }\n\n  // One option per distinct text; the answer wins over the same text listed as a distractor\n  function buildOptions(blank) {\n    var seen = {}, out = [];\n    function add(html, correct) {\n      var k = norm(html);\n      if (seen[k]) { if (correct) seen[k].correct = true; return; }\n      seen[k] = { html: html, correct: correct };\n      out.push(seen[k]);\n    }\n    add(blank.answer, true);\n    blank.distractors.forEach(function (d) { add(d, false); });\n    return shuffle(out);\n  }\n\n  // Ties saved picks to this exact card so a stale save is never applied\n  function signature(answers) {\n    return answers.map(norm).join('␞');\n  }\n\n  function isLong(options) {\n    return options.some(function (o) { return textOf(o.html).length > LONG_OPTION; });\n  }\n\n  // Front: every active blank with its options; blanks with nothing to offer get none\n  function readFront(question) {\n    var blanks = Array.prototype.map.call(question.querySelectorAll('.cloze[data-cloze]'), readActive);\n    cleanVisible(question);\n    borrowSiblings(blanks);\n    blanks.forEach(function (b) { if (b.distractors.length) b.options = buildOptions(b); });\n    return blanks;\n  }\n\n  function save(data) {\n    if (window.Persistence && Persistence.isAvailable()) Persistence.setItem(STORE_KEY, data);\n  }\n\n  function load() {\n    if (!window.Persistence || !Persistence.isAvailable()) return null;\n    var data = Persistence.getItem(STORE_KEY);\n    Persistence.removeItem(STORE_KEY);\n    return data;\n  }\n\n  return {\n    readFront: readFront, cleanVisible: cleanVisible, signature: signature,\n    isLong: isLong, norm: norm, save: save, load: load\n  };\n})();\n<\/script>\n\n<script>\n(function () {\n  var C = window.ClozedMCQ;\n  window.ClozedMCQActive = null;\n  var question = document.getElementById('cmcq-question');\n  var check = document.getElementById('cmcq-check');\n  if (!question) return;\n\n  C.cleanVisible(question);\n  var spans = Array.prototype.slice.call(question.querySelectorAll('.cloze'));\n  var saved = C.load();\n  if (!saved || saved.sig !== C.signature(spans.map(function (s) { return s.innerHTML; }))) return;\n\n  // Only picked blanks are graded; untouched blanks were recalled and the user grades those\n  var picked = 0, allRight = true;\n  spans.forEach(function (span, i) {\n    var p = saved.picks[i];\n    if (!p) return;\n    picked++;\n    if (p.correct) { span.classList.add('cmcq-ok'); return; }\n    allRight = false;\n    span.classList.add('cmcq-missed');\n    var wrong = document.createElement('s');\n    wrong.className = 'cmcq-wrong';\n    wrong.innerHTML = p.html;\n    span.parentNode.insertBefore(wrong, span);\n  });\n  if (!picked || !check) return;\n  check.textContent = allRight ? 'Correct' : 'Wrong';\n  check.className = 'cmcq-check ' + (allRight ? 'success' : 'error');\n})();\n<\/script>\n", "css": "/* ===================================================================\n   Clozed MCQ styling\n   Colours live in the variables below; night mode swaps them.\n   =================================================================== */\n.card {\n  --cloze: blue;\n  --choice: #c2410c;                       /* blank with choices behind it */\n  --choice-glow: rgba(234, 88, 12, 0.45);\n  --ok: #5f9e33;\n  --wrong: #F04A32;\n  --missed: #b59a00;\n  --pill: rgba(0, 0, 0, 0.06);\n  --pill-hover: rgba(0, 0, 0, 0.10);\n  --muted: #777;\n  --line: #ddd;\n\n  text-align: center;\n  margin: 0;\n  padding: 16px 12px 24px;\n  font-family: Menlo, Baskerville, sans-serif;\n  font-size: clamp(18px, 3vmin, 25px);\n  color: black;\n  background-color: white;\n}\n\n.card.nightMode, .card.night_mode, .nightMode .card, .night_mode .card {\n  --cloze: lightblue;\n  --choice: #fb923c;\n  --choice-glow: rgba(251, 146, 60, 0.5);\n  --ok: #8AC05E;\n  --missed: #F4E45F;\n  --pill: rgba(255, 255, 255, 0.07);\n  --pill-hover: rgba(255, 255, 255, 0.12);\n  --muted: #999;\n  --line: #444;\n  color: white;\n  background-color: #2f2f31;\n}\n\n.question {\n  font-size: clamp(20px, 4vmin, 30px);\n  line-height: 1.7;\n  padding: 2vh 1vw;\n  word-break: break-word;\n}\n\n.cloze { font-weight: bold; color: var(--cloze); }\n\n/* --- A blank with choices: own colour, gentle pulse, generous tap area --- */\n.cloze.has-choices {\n  color: var(--choice);\n  cursor: pointer;\n  border-radius: 6px;\n  padding: 2px 6px;\n  margin: -2px 0;\n  -webkit-tap-highlight-color: transparent;\n  animation: cmcq-pulse 2.4s ease-in-out infinite;\n}\n.cloze.has-choices.open {\n  animation: none;\n  background: var(--pill-hover);\n  box-shadow: 0 0 0 2px var(--choice-glow);\n}\n.cloze.has-choices.picked {\n  animation: none;\n  border-bottom: 2px solid var(--choice);\n  border-radius: 6px 6px 0 0;\n}\n@keyframes cmcq-pulse {\n  0%, 100% { box-shadow: 0 0 0 0 transparent; }\n  50%      { box-shadow: 0 0 10px 2px var(--choice-glow); }\n}\n@media (prefers-reduced-motion: reduce) {\n  .cloze.has-choices { animation: none; box-shadow: 0 0 6px 1px var(--choice-glow); }\n}\n\n/* --- Choices panel --- */\n.cmcq-panel { margin: 1vh auto 0; max-width: 640px; }\n.cmcq-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: system-ui, sans-serif; }\n.cmcq-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }\n.cmcq-options button {\n  font: inherit;\n  font-size: clamp(15px, 3vmin, 20px);\n  padding: 10px 14px;\n  border: 0;\n  border-radius: 10px;\n  background: var(--pill);\n  color: inherit;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n.cmcq-options button:hover { background: var(--pill-hover); }\n.cmcq-options button kbd { font: 11px/1 system-ui, sans-serif; opacity: .55; margin-right: 6px; }\n.cmcq-options.rows { flex-direction: column; align-items: stretch; }\n.cmcq-options.rows button { text-align: left; border-radius: 12px; }\n\n/* --- Answer side --- */\n.cloze.cmcq-ok { color: var(--ok); }\n.cloze.cmcq-missed { color: var(--missed); }\ns.cmcq-wrong { color: var(--wrong); font-weight: bold; margin-right: 6px; }\n.cmcq-check { position: fixed; top: 0; left: 0; padding: 2px 10px; font-weight: bold; font-size: 16px; }\n.cmcq-check.success { color: var(--ok); }\n.cmcq-check.error { color: var(--wrong); }\n\n.extra {\n  font-size: clamp(14px, 2.5vmin, 18px);\n  margin: 2vh auto 0;\n  padding-top: 1.5vh;\n  border-top: 1px solid var(--line);\n  max-width: 640px;\n}\n\nimg { display: block; max-width: 100%; margin: 10px auto; }\n"};
+
+const NOTES = [
+  { name: 'Single and nested blanks', extra: 'Rationale: metformin activates AMPK and lowers hepatic glucose output.',
+    text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes because it {{c2::reduces hepatic {{c3::gluconeogenesis;;glycogenolysis;;lipolysis;;ketogenesis}};;increases insulin release;;slows gastric emptying;;blocks renal glucose reabsorption}}.' },
+  { name: 'Same number twice', extra: 'Net result: the cell interior becomes more negative.',
+    text: 'The Na<sup>+</sup>/K<sup>+</sup> ATPase pumps 3 {{c1::Na+;;K+;;Ca2+;;Cl-}} out and 2 {{c1::K+;;Na+;;H+}} in per ATP.' },
+  { name: 'No lists, sibling fallback', extra: '',
+    text: 'Glycolysis: glucose is phosphorylated by {{c1::hexokinase}}, rearranged by {{c1::phosphoglucose isomerase}}, then committed by {{c1::phosphofructokinase-1}}.' },
+  { name: 'Plain cloze (migrated note)', extra: 'Migrated notes look like this until you add distractors.',
+    text: '{{c1::Canberra}} was founded in {{c2::1913}}.' },
+  { name: 'Hint before the list', extra: '',
+    text: '{{c1::Metformin::biguanide;;Phenformin;;Buformin;;Glipizide}} lowers hepatic glucose output.' },
+  { name: 'Formatting and shared blank', extra: '',
+    text: '<b>{{c1,2::Atropine;;Pilocarpine;;Neostigmine}}</b> is a {{c2::<i>muscarinic antagonist</i>;;nicotinic agonist;;cholinesterase inhibitor}}.' },
+];
+
+// ---- Simulated Anki cloze renderer (mirrors rslib/src/cloze.rs output) ----
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function parseNote(src) {
+  const root = { kids: [] }, stack = [root];
+  let i = 0, buf = '';
+  const flush = () => { if (buf) { stack[stack.length - 1].kids.push(buf); buf = ''; } };
+  while (i < src.length) {
+    const m = src.slice(i).match(/^\{\{c(\d+(?:,\d+)*)::/);
+    if (m) {
+      flush();
+      const node = { ords: m[1].split(',').map(Number), kids: [] };
+      stack[stack.length - 1].kids.push(node); stack.push(node);
+      i += m[0].length; continue;
+    }
+    if (src.startsWith('}}', i) && stack.length > 1) {
+      flush();
+      const node = stack.pop();
+      if (typeof node.kids[0] === 'string') {
+        const k = node.kids[0].indexOf('::');
+        if (k >= 0) { node.hint = node.kids[0].slice(k + 2); node.kids[0] = node.kids[0].slice(0, k); }
+      }
+      i += 2; continue;
+    }
+    buf += src[i++];
+  }
+  flush();
+  return root.kids;
+}
+
+function ordsOf(nodes, out = new Set()) {
+  nodes.forEach(n => { if (typeof n !== 'string') { n.ords.forEach(o => out.add(o)); ordsOf(n.kids, out); } });
+  return [...out].sort((a, b) => a - b);
+}
+
+function renderNodes(nodes, ord, question) {
+  return nodes.map(n => typeof n === 'string' ? n : renderCloze(n, ord, question)).join('');
+}
+
+function renderCloze(n, ord, question) {
+  const active = n.ords.includes(ord);
+  const inner = renderNodes(n.kids, ord, question);
+  if (active && question) return `<span class="cloze" data-cloze="${esc(inner)}" data-ordinal="${ord}">[${n.hint ?? '...'}]</span>`;
+  if (active) return `<span class="cloze" data-ordinal="${ord}">${inner}</span>`;
+  return `<span class="cloze-inactive" data-ordinal="${n.ords[0]}">${inner}</span>`;
+}
+
+// ---- Anki-style field substitution ----
+function renderTemplate(tpl, fields, ord, question) {
+  tpl = tpl.replace(/\{\{([#^])([^}]+)\}\}([\s\S]*?)\{\{\/\2\}\}/g, (_, kind, name, body) => {
+    const filled = (fields[name.trim()] || '').trim() !== '';
+    return (kind === '#') === filled ? body : '';
+  });
+  return tpl.replace(/\{\{([^}]+)\}\}/g, (_, ref) => {
+    const m = ref.match(/^cloze:(.+)$/);
+    if (m) return renderNodes(parseNote(fields[m[1].trim()] || ''), ord, question);
+    return fields[ref.trim()] ?? '';
+  });
+}
+
+// ---- The fake Anki reviewer: one page, card HTML swapped in, scripts re-run ----
+const frame = document.getElementById('anki');
+let night = false;
+frame.srcdoc = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>${TEMPLATES.css}</style></head><body class="card"><div id="qa"></div>
+<script>
+window.py = {};   // Anki desktop exposes this; anki-persistence stores picks on it
+window.setQA = function (html) {
+  var qa = document.getElementById('qa');
+  qa.innerHTML = html;
+  qa.querySelectorAll('script').forEach(function (old) {
+    var s = document.createElement('script');
+    s.textContent = old.textContent;
+    old.replaceWith(s);
+  });
+};
+<\/script></body></html>`;
+
+const $ = id => document.getElementById(id);
+NOTES.forEach((n, i) => $('note').add(new Option(n.name, i)));
+
+function loadNote() {
+  const n = NOTES[+$('note').value];
+  $('text').value = n.text;
+  $('extra').value = n.extra;
+  refreshOrds();
+}
+
+function refreshOrds() {
+  const keep = $('ord').value;
+  $('ord').innerHTML = '';
+  ordsOf(parseNote($('text').value)).forEach(o => $('ord').add(new Option('Card ' + o + ' (c' + o + ')', o)));
+  if ([...$('ord').options].some(o => o.value === keep)) $('ord').value = keep;
+}
+
+function show(question) {
+  const fields = { 'Text': $('text').value, 'Back Extra': $('extra').value };
+  const ord = +$('ord').value;
+  frame.contentWindow.setQA(renderTemplate(question ? TEMPLATES.front : TEMPLATES.back, fields, ord, question));
+  $('status').textContent = (question ? 'Question' : 'Answer') + ' side, card ' + ord;
+}
+
+$('note').onchange = () => { loadNote(); show(true); };
+$('text').oninput = refreshOrds;
+$('ord').onchange = () => show(true);
+$('showFront').onclick = () => show(true);
+$('showBack').onclick = () => show(false);
+$('night').onclick = () => {
+  night = !night;
+  frame.contentDocument.body.className = 'card' + (night ? ' nightMode night_mode' : '');
+};
+$('phone').onclick = () => frame.classList.toggle('phone');
+
+frame.onload = () => { loadNote(); show(true); };
+</script>
+</body>
+</html>
