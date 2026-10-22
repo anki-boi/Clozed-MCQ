@@ -7,6 +7,24 @@
 <div class="extra">{{Back Extra}}</div>
 {{/Back Extra}}
 
+<div class="cmcq-resources" id="cmcq-resources">
+{{#Lecture Notes}}<div class="cmcq-res" data-name="Lecture Notes"><button type="button" class="cmcq-res-btn">Lecture Notes</button><div class="cmcq-res-body" dir="auto" hidden>{{Lecture Notes}}</div></div>{{/Lecture Notes}}
+{{#Missed Questions}}<div class="cmcq-res" data-name="Missed Questions"><button type="button" class="cmcq-res-btn">Missed Questions</button><div class="cmcq-res-body" dir="auto" hidden>{{Missed Questions}}</div></div>{{/Missed Questions}}
+{{#Pathoma}}<div class="cmcq-res" data-name="Pathoma"><button type="button" class="cmcq-res-btn">Pathoma</button><div class="cmcq-res-body" dir="auto" hidden>{{Pathoma}}</div></div>{{/Pathoma}}
+{{#Boards and Beyond}}<div class="cmcq-res" data-name="Boards and Beyond"><button type="button" class="cmcq-res-btn">Boards and Beyond</button><div class="cmcq-res-body" dir="auto" hidden>{{Boards and Beyond}}</div></div>{{/Boards and Beyond}}
+{{#First Aid}}<div class="cmcq-res" data-name="First Aid"><button type="button" class="cmcq-res-btn">First Aid</button><div class="cmcq-res-body" dir="auto" hidden>{{First Aid}}</div></div>{{/First Aid}}
+{{#Sketchy}}<div class="cmcq-res" data-name="Sketchy"><button type="button" class="cmcq-res-btn">Sketchy</button><div class="cmcq-res-body" dir="auto" hidden>{{Sketchy}}</div></div>{{/Sketchy}}
+{{#Sketchy 2}}<div class="cmcq-res" data-name="Sketchy 2"><button type="button" class="cmcq-res-btn">Sketchy 2</button><div class="cmcq-res-body" dir="auto" hidden>{{Sketchy 2}}</div></div>{{/Sketchy 2}}
+{{#Sketchy Extra}}<div class="cmcq-res" data-name="Sketchy Extra"><button type="button" class="cmcq-res-btn">Sketchy Extra</button><div class="cmcq-res-body" dir="auto" hidden>{{Sketchy Extra}}</div></div>{{/Sketchy Extra}}
+{{#Picmonic}}<div class="cmcq-res" data-name="Picmonic"><button type="button" class="cmcq-res-btn">Picmonic</button><div class="cmcq-res-body" dir="auto" hidden>{{Picmonic}}</div></div>{{/Picmonic}}
+{{#Pixorize}}<div class="cmcq-res" data-name="Pixorize"><button type="button" class="cmcq-res-btn">Pixorize</button><div class="cmcq-res-body" dir="auto" hidden>{{Pixorize}}</div></div>{{/Pixorize}}
+{{#Physeo}}<div class="cmcq-res" data-name="Physeo"><button type="button" class="cmcq-res-btn">Physeo</button><div class="cmcq-res-body" dir="auto" hidden>{{Physeo}}</div></div>{{/Physeo}}
+{{#Bootcamp}}<div class="cmcq-res" data-name="Bootcamp"><button type="button" class="cmcq-res-btn">Bootcamp</button><div class="cmcq-res-body" dir="auto" hidden>{{Bootcamp}}</div></div>{{/Bootcamp}}
+{{#OME}}<div class="cmcq-res" data-name="OME"><button type="button" class="cmcq-res-btn">OME</button><div class="cmcq-res-body" dir="auto" hidden>{{OME}}</div></div>{{/OME}}
+{{#Additional Resources}}<div class="cmcq-res" data-name="Additional Resources"><button type="button" class="cmcq-res-btn">Additional Resources</button><div class="cmcq-res-body" dir="auto" hidden>{{Additional Resources}}</div></div>{{/Additional Resources}}
+</div>
+<div id="cmcq-tags" hidden>{{Tags}}</div>
+
 <script>
 // anki-persistence v0.5.3 by Simon Lammer (MIT): https://github.com/SimonLammer/anki-persistence
 if(void 0===window.Persistence){var _persistenceKey="github.com/SimonLammer/anki-persistence/",_defaultKey="_default";if(window.Persistence_sessionStorage=function(){var e=!1;try{"object"==typeof window.sessionStorage&&(e=!0,this.clear=function(){for(var e=0;e<sessionStorage.length;e++){var t=sessionStorage.key(e);0==t.indexOf(_persistenceKey)&&(sessionStorage.removeItem(t),e--)}},this.setItem=function(e,t){void 0==t&&(t=e,e=_defaultKey),sessionStorage.setItem(_persistenceKey+e,JSON.stringify(t))},this.getItem=function(e){return void 0==e&&(e=_defaultKey),JSON.parse(sessionStorage.getItem(_persistenceKey+e))},this.removeItem=function(e){void 0==e&&(e=_defaultKey),sessionStorage.removeItem(_persistenceKey+e)})}catch(e){}this.isAvailable=function(){return e}},window.Persistence_windowKey=function(e){var t=window[e],i=!1;"object"==typeof t&&(i=!0,this.clear=function(){t[_persistenceKey]={}},this.setItem=function(e,i){void 0==i&&(i=e,e=_defaultKey),t[_persistenceKey][e]=i},this.getItem=function(e){return void 0==e&&(e=_defaultKey),void 0==t[_persistenceKey][e]?null:t[_persistenceKey][e]},this.removeItem=function(e){void 0==e&&(e=_defaultKey),delete t[_persistenceKey][e]},void 0==t[_persistenceKey]&&this.clear()),this.isAvailable=function(){return i}},window.Persistence=new Persistence_sessionStorage,Persistence.isAvailable()||(window.Persistence=new Persistence_windowKey("py")),!Persistence.isAvailable()){var titleStartIndex=window.location.toString().indexOf("title"),titleContentIndex=window.location.toString().indexOf("main",titleStartIndex);titleStartIndex>0&&titleContentIndex>0&&titleContentIndex-titleStartIndex<10&&(window.Persistence=new Persistence_windowKey("qt"))}}
@@ -198,5 +216,120 @@ window.ClozedMCQ = (function () {
   if (!picked || !check) return;
   check.textContent = allRight ? 'Correct' : 'Wrong';
   check.className = 'cmcq-check ' + (allRight ? 'success' : 'error');
+})();
+</script>
+
+<script>
+// Resource fields (Lecture Notes, Pixorize, ...) behave like the AnKing note type's
+// hint buttons, with the same setting names so AnKing users can copy theirs across.
+(function () {
+  // ===================================================================
+  // --- CONFIGURATION ---
+  // ===================================================================
+
+  // Shortcut per field, written like "Alt + 1". Leave "" for none.
+  var ButtonShortcuts = {
+    "Lecture Notes": "Alt + 1",
+    "Missed Questions": "Alt + 2",
+    "Pathoma": "Alt + 3",
+    "Boards and Beyond": "Alt + 4",
+    "First Aid": "Alt + 5",
+    "Sketchy": "Alt + 6",
+    "Sketchy 2": "",
+    "Sketchy Extra": "",
+    "Picmonic": "",
+    "Pixorize": "Alt + 7",
+    "Physeo": "Alt + 8",
+    "Bootcamp": "Alt + F2",
+    "OME": "Alt + F1",
+    "Additional Resources": "Alt + 9"
+  };
+  var ToggleAllButtonsShortcut = "'";
+  var ToggleNextButtonShortcut = "H";
+
+  // Open a field automatically on every card. A tag such as autoopen::lecture_notes
+  // opens it on that note only.
+  var ButtonAutoReveal = {
+    "Lecture Notes": false,
+    "Missed Questions": false,
+    "Pathoma": false,
+    "Boards and Beyond": false,
+    "First Aid": false,
+    "Sketchy": false,
+    "Sketchy 2": false,
+    "Sketchy Extra": false,
+    "Picmonic": false,
+    "Pixorize": false,
+    "Physeo": false,
+    "Bootcamp": false,
+    "OME": false,
+    "Additional Resources": false
+  };
+
+  // Scroll an opened field into view.
+  var ScrollToButton = true;
+
+  // ===================================================================
+
+  var root = document.getElementById('cmcq-resources');
+  if (!root) return;
+  var tagsEl = document.getElementById('cmcq-tags');
+  var tags = (tagsEl ? tagsEl.textContent : '').toLowerCase().split(/\s+/);
+
+  function toggle(res, open, noScroll) {
+    var body = res.querySelector('.cmcq-res-body');
+    if (open === undefined) open = body.hidden;
+    body.hidden = !open;
+    res.classList.toggle('expanded', open);
+    if (open && ScrollToButton && !noScroll && body.scrollIntoView) {
+      body.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    }
+  }
+
+  root.querySelectorAll('.cmcq-res').forEach(function (res) {
+    var name = res.getAttribute('data-name');
+    var tag = 'autoopen::' + name.toLowerCase().replace(/ /g, '_');
+    res.querySelector('.cmcq-res-btn').addEventListener('click', function () { toggle(res); });
+    if (ButtonShortcuts[name]) res.title = 'Shortcut: ' + ButtonShortcuts[name];
+    if (ButtonAutoReveal[name] || tags.indexOf(tag) >= 0) toggle(res, true, true);
+  });
+
+  // "Alt + 1" -> matcher for keydown events
+  function matcher(shortcut) {
+    if (!shortcut) return function () { return false; };
+    var parts = shortcut.split('+').map(function (p) { return p.trim().toLowerCase(); });
+    var key = parts.pop();
+    var mods = { alt: parts.indexOf('alt') >= 0, ctrl: parts.indexOf('ctrl') >= 0, shift: parts.indexOf('shift') >= 0 };
+    return function (e) {
+      if (e.altKey !== mods.alt || e.ctrlKey !== mods.ctrl || (mods.shift && !e.shiftKey)) return false;
+      var code = (e.code || '').toLowerCase();
+      return e.key.toLowerCase() === key || code === 'digit' + key || code === 'key' + key || code === key;
+    };
+  }
+
+  window.ClozedMCQResources = {
+    toggle: toggle,
+    shortcuts: Object.keys(ButtonShortcuts).map(function (name) { return { name: name, match: matcher(ButtonShortcuts[name]) }; }),
+    all: matcher(ToggleAllButtonsShortcut),
+    next: matcher(ToggleNextButtonShortcut)
+  };
+
+  // Installed once: Anki desktop keeps one page between cards
+  if (!window.ClozedMCQResourceKeys) {
+    window.ClozedMCQResourceKeys = true;
+    document.addEventListener('keydown', function (e) {
+      var r = window.ClozedMCQResources, box = document.getElementById('cmcq-resources');
+      if (!r || !box || e.repeat) return;
+      var items = Array.prototype.slice.call(box.querySelectorAll('.cmcq-res'));
+      if (!items.length) return;
+      if (r.all(e)) { var anyClosed = items.some(function (i) { return !i.classList.contains('expanded'); }); items.forEach(function (i) { r.toggle(i, anyClosed, true); }); return; }
+      if (r.next(e)) { var next = items.filter(function (i) { return !i.classList.contains('expanded'); })[0]; if (next) r.toggle(next, true); return; }
+      r.shortcuts.forEach(function (s) {
+        if (!s.match(e)) return;
+        var item = box.querySelector('.cmcq-res[data-name="' + s.name + '"]');
+        if (item) { e.preventDefault(); r.toggle(item); }
+      });
+    });
+  }
 })();
 </script>

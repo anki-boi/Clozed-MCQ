@@ -6,6 +6,11 @@
 <div class="extra">{{Back Extra}}</div>
 {{/Back Extra}}
 
+<div class="cmcq-resources" id="cmcq-resources">
+<!-- @RESOURCES@ -->
+</div>
+<div id="cmcq-tags" hidden>{{Tags}}</div>
+
 <script>
 /* @PERSISTENCE@ */
 </script>
@@ -44,5 +49,120 @@
   if (!picked || !check) return;
   check.textContent = allRight ? 'Correct' : 'Wrong';
   check.className = 'cmcq-check ' + (allRight ? 'success' : 'error');
+})();
+</script>
+
+<script>
+// Resource fields (Lecture Notes, Pixorize, ...) behave like the AnKing note type's
+// hint buttons, with the same setting names so AnKing users can copy theirs across.
+(function () {
+  // ===================================================================
+  // --- CONFIGURATION ---
+  // ===================================================================
+
+  // Shortcut per field, written like "Alt + 1". Leave "" for none.
+  var ButtonShortcuts = {
+    "Lecture Notes": "Alt + 1",
+    "Missed Questions": "Alt + 2",
+    "Pathoma": "Alt + 3",
+    "Boards and Beyond": "Alt + 4",
+    "First Aid": "Alt + 5",
+    "Sketchy": "Alt + 6",
+    "Sketchy 2": "",
+    "Sketchy Extra": "",
+    "Picmonic": "",
+    "Pixorize": "Alt + 7",
+    "Physeo": "Alt + 8",
+    "Bootcamp": "Alt + F2",
+    "OME": "Alt + F1",
+    "Additional Resources": "Alt + 9"
+  };
+  var ToggleAllButtonsShortcut = "'";
+  var ToggleNextButtonShortcut = "H";
+
+  // Open a field automatically on every card. A tag such as autoopen::lecture_notes
+  // opens it on that note only.
+  var ButtonAutoReveal = {
+    "Lecture Notes": false,
+    "Missed Questions": false,
+    "Pathoma": false,
+    "Boards and Beyond": false,
+    "First Aid": false,
+    "Sketchy": false,
+    "Sketchy 2": false,
+    "Sketchy Extra": false,
+    "Picmonic": false,
+    "Pixorize": false,
+    "Physeo": false,
+    "Bootcamp": false,
+    "OME": false,
+    "Additional Resources": false
+  };
+
+  // Scroll an opened field into view.
+  var ScrollToButton = true;
+
+  // ===================================================================
+
+  var root = document.getElementById('cmcq-resources');
+  if (!root) return;
+  var tagsEl = document.getElementById('cmcq-tags');
+  var tags = (tagsEl ? tagsEl.textContent : '').toLowerCase().split(/\s+/);
+
+  function toggle(res, open, noScroll) {
+    var body = res.querySelector('.cmcq-res-body');
+    if (open === undefined) open = body.hidden;
+    body.hidden = !open;
+    res.classList.toggle('expanded', open);
+    if (open && ScrollToButton && !noScroll && body.scrollIntoView) {
+      body.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    }
+  }
+
+  root.querySelectorAll('.cmcq-res').forEach(function (res) {
+    var name = res.getAttribute('data-name');
+    var tag = 'autoopen::' + name.toLowerCase().replace(/ /g, '_');
+    res.querySelector('.cmcq-res-btn').addEventListener('click', function () { toggle(res); });
+    if (ButtonShortcuts[name]) res.title = 'Shortcut: ' + ButtonShortcuts[name];
+    if (ButtonAutoReveal[name] || tags.indexOf(tag) >= 0) toggle(res, true, true);
+  });
+
+  // "Alt + 1" -> matcher for keydown events
+  function matcher(shortcut) {
+    if (!shortcut) return function () { return false; };
+    var parts = shortcut.split('+').map(function (p) { return p.trim().toLowerCase(); });
+    var key = parts.pop();
+    var mods = { alt: parts.indexOf('alt') >= 0, ctrl: parts.indexOf('ctrl') >= 0, shift: parts.indexOf('shift') >= 0 };
+    return function (e) {
+      if (e.altKey !== mods.alt || e.ctrlKey !== mods.ctrl || (mods.shift && !e.shiftKey)) return false;
+      var code = (e.code || '').toLowerCase();
+      return e.key.toLowerCase() === key || code === 'digit' + key || code === 'key' + key || code === key;
+    };
+  }
+
+  window.ClozedMCQResources = {
+    toggle: toggle,
+    shortcuts: Object.keys(ButtonShortcuts).map(function (name) { return { name: name, match: matcher(ButtonShortcuts[name]) }; }),
+    all: matcher(ToggleAllButtonsShortcut),
+    next: matcher(ToggleNextButtonShortcut)
+  };
+
+  // Installed once: Anki desktop keeps one page between cards
+  if (!window.ClozedMCQResourceKeys) {
+    window.ClozedMCQResourceKeys = true;
+    document.addEventListener('keydown', function (e) {
+      var r = window.ClozedMCQResources, box = document.getElementById('cmcq-resources');
+      if (!r || !box || e.repeat) return;
+      var items = Array.prototype.slice.call(box.querySelectorAll('.cmcq-res'));
+      if (!items.length) return;
+      if (r.all(e)) { var anyClosed = items.some(function (i) { return !i.classList.contains('expanded'); }); items.forEach(function (i) { r.toggle(i, anyClosed, true); }); return; }
+      if (r.next(e)) { var next = items.filter(function (i) { return !i.classList.contains('expanded'); })[0]; if (next) r.toggle(next, true); return; }
+      r.shortcuts.forEach(function (s) {
+        if (!s.match(e)) return;
+        var item = box.querySelector('.cmcq-res[data-name="' + s.name + '"]');
+        if (item) { e.preventDefault(); r.toggle(item); }
+      });
+    });
+  }
 })();
 </script>

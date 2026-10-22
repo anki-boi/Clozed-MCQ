@@ -35,6 +35,10 @@
     <textarea id="text" spellcheck="false"></textarea>
     <label for="extra">Back Extra</label>
     <textarea id="extra" spellcheck="false" style="min-height:60px"></textarea>
+    <label for="more">Other fields, one per line as <code>Field name: html</code></label>
+    <textarea id="more" spellcheck="false" style="min-height:90px"></textarea>
+    <label for="tags">Tags</label>
+    <textarea id="tags" spellcheck="false" style="min-height:34px"></textarea>
     <label for="ord">Card</label>
     <select id="ord"></select>
     <div class="row">
@@ -57,6 +61,11 @@
 
 const NOTES = [
   { name: 'Single and nested blanks', extra: 'Rationale: metformin activates AMPK and lowers hepatic glucose output.',
+    more: 'Lecture Notes: Biguanides are first-line unless eGFR is below 30. <a href="https://example.com/lecture">Lecture slides</a>\n' +
+          'Missed Questions: Q42: confused metformin with sulfonylureas.\n' +
+          'Pixorize: <a href="https://example.com/pixorize">Metformin mnemonic image</a>\n' +
+          'Additional Resources: <a href="https://example.com/review">Review article</a>',
+    tags: 'pharm::diabetes',
     text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes because it {{c2::reduces hepatic {{c3::gluconeogenesis;;glycogenolysis;;lipolysis;;ketogenesis}};;increases insulin release;;slows gastric emptying;;blocks renal glucose reabsorption}}.' },
   { name: 'Same number twice', extra: 'Net result: the cell interior becomes more negative.',
     text: 'The Na<sup>+</sup>/K<sup>+</sup> ATPase pumps 3 {{c1::Na+;;K+;;Ca2+;;Cl-}} out and 2 {{c1::K+;;Na+;;H+}} in per ATP.' },
@@ -126,7 +135,10 @@ function renderTemplate(tpl, fields, ord, question) {
   return tpl.replace(/\{\{([^}]+)\}\}/g, (_, ref) => {
     const m = ref.match(/^cloze:(.+)$/);
     if (m) return renderNodes(parseNote(fields[m[1].trim()] || ''), ord, question);
-    return fields[ref.trim()] ?? '';
+    const name = ref.trim();
+    // Anki refuses a template that names a field the note type does not have
+    if (!TEMPLATES.fields.includes(name) && name !== 'Tags') throw new Error(`Template names "${name}", which is not a field`);
+    return fields[name] ?? '';
   });
 }
 
@@ -155,6 +167,8 @@ function loadNote() {
   const n = NOTES[+$('note').value];
   $('text').value = n.text;
   $('extra').value = n.extra;
+  $('more').value = n.more || '';
+  $('tags').value = n.tags || '';
   refreshOrds();
 }
 
@@ -166,10 +180,20 @@ function refreshOrds() {
 }
 
 function show(question) {
-  const fields = { 'Text': $('text').value, 'Back Extra': $('extra').value };
+  const fields = { 'Text': $('text').value, 'Back Extra': $('extra').value, 'Tags': $('tags').value };
+  $('more').value.split('\n').forEach(line => {
+    const at = line.indexOf(':');
+    if (at > 0) fields[line.slice(0, at).trim()] = line.slice(at + 1).trim();
+  });
+  const unknown = Object.keys(fields).filter(f => f !== 'Tags' && !TEMPLATES.fields.includes(f));
   const ord = +$('ord').value;
-  frame.contentWindow.setQA(renderTemplate(question ? TEMPLATES.front : TEMPLATES.back, fields, ord, question));
-  $('status').textContent = (question ? 'Question' : 'Answer') + ' side, card ' + ord;
+  try {
+    frame.contentWindow.setQA(renderTemplate(question ? TEMPLATES.front : TEMPLATES.back, fields, ord, question));
+    $('status').textContent = (question ? 'Question' : 'Answer') + ' side, card ' + ord +
+      (unknown.length ? '. Not fields of this note type: ' + unknown.join(', ') : '');
+  } catch (err) {
+    $('status').textContent = 'Anki would reject this template: ' + err.message;
+  }
 }
 
 $('note').onchange = () => { loadNote(); show(true); };

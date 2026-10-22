@@ -13,6 +13,8 @@
   --pill-hover: rgba(0, 0, 0, 0.10);
   --muted: #777;
   --line: #ddd;
+  --hint: #4297F9;                         /* resource field text, as in AnKing */
+  --missed-q: red;
 
   text-align: center;
   margin: 0;
@@ -109,5 +111,38 @@ s.cmcq-wrong { color: var(--wrong); font-weight: bold; margin-right: 6px; }
   border-top: 1px solid var(--line);
   max-width: 640px;
 }
+
+/* --- Resource fields (Lecture Notes, Pixorize, ...): AnKing-style buttons that open in place --- */
+.cmcq-resources {
+  max-width: 760px;
+  margin: 1.5vh auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.cmcq-res { display: contents; }
+.cmcq-res-btn {
+  font: 600 12px/1.2 system-ui, sans-serif;
+  padding: 6px 10px;
+  border: 1px solid #525253;
+  border-radius: 6px;
+  background: #424242;
+  color: white;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmcq-res-btn:hover { background: #555; }
+.cmcq-res.expanded .cmcq-res-btn { flex-basis: 100%; font-weight: bold; }
+.cmcq-res-body {
+  flex-basis: 100%;
+  text-align: left;
+  font-size: .85rem;
+  font-style: italic;
+  color: var(--hint);
+  padding: 4px 6px 8px;
+}
+.cmcq-res[data-name="Missed Questions"] .cmcq-res-body { color: var(--missed-q); }
+.cmcq-res-body img { max-width: 100%; height: auto; }
 
 img { display: block; max-width: 100%; margin: 10px auto; }
