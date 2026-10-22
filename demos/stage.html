@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>Clozed MCQ Demos</title>
+<style>
+  :root { --bg: #0f1115; --ink: #f2f2ee; --muted: #9a9ca3; --accent: #fb923c; --panel: #181b22; --line: #2a2e38; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+  #stage { position: relative; width: 1280px; height: 720px; overflow: hidden;
+           background: radial-gradient(900px 500px at 15% 10%, #1d2230 0%, transparent 60%),
+                       radial-gradient(700px 500px at 90% 90%, #2a1a12 0%, transparent 60%), var(--bg); }
+  .left { position: absolute; left: 72px; top: 64px; width: 600px; bottom: 56px; display: flex; flex-direction: column; }
+  .brand { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .brand span { color: var(--muted); font-weight: 600; margin-left: 10px; letter-spacing: .08em; }
+  h1 { font-size: 44px; line-height: 1.12; margin: 18px 0 0; font-weight: 750; letter-spacing: -.01em; }
+  .say { margin-top: 22px; font-size: 24px; line-height: 1.45; color: #d9d9d4; min-height: 106px; transition: opacity .25s ease; }
+  .say b { color: var(--accent); font-weight: 650; }
+  .say.out { opacity: 0; }
+  .source { margin-top: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; }
+  .source .label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .source pre { margin: 0; font: 16px/1.55 Consolas, "Cascadia Mono", Menlo, monospace; white-space: pre-wrap; word-break: break-word; color: #e6e6e1; min-height: 50px; }
+  .source .ord { color: #7aa2ff; }
+  .source .sep { color: var(--accent); font-weight: 700; }
+  .source .brace { color: #6b7080; }
+  .source .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .source.hidden { visibility: hidden; }
+
+  .phone { position: absolute; right: 120px; top: 28px; width: 392px; height: 664px; border-radius: 44px; padding: 14px;
+           background: #05060a; box-shadow: 0 0 0 2px #2b2f3a, 0 30px 80px rgba(0,0,0,.55); }
+  .phone iframe { width: 364px; height: 636px; border: 0; border-radius: 32px; background: white; display: block; }
+  .tag { position: absolute; right: 120px; width: 392px; bottom: 10px; text-align: center; font-size: 13px; color: var(--muted); }
+
+  #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,.95); background: rgba(255,255,255,.08);
+            box-shadow: 0 2px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.35);
+            transform: var(--pos, translate(1000px, 700px));
+            transition: transform .65s cubic-bezier(.3,.7,.2,1), opacity .3s; opacity: 0; z-index: 10; pointer-events: none; }
+  #cursor.down { transform: var(--pos) scale(.8); }
+  .ripple { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid var(--accent);
+            animation: ripple .6s ease-out forwards; z-index: 9; pointer-events: none; }
+  @keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+  #keys { position: absolute; right: 120px; width: 392px; top: 600px; display: flex; justify-content: center; gap: 8px; z-index: 11; pointer-events: none; }
+  .keycap { min-width: 54px; padding: 10px 14px; border-radius: 10px; background: #f4f4f0; color: #111; text-align: center;
+            font: 700 20px/1 "Segoe UI", system-ui, sans-serif; box-shadow: 0 4px 0 #b9b9b2, 0 10px 24px rgba(0,0,0,.4);
+            animation: key 1.1s ease forwards; }
+  @keyframes key { 0% { transform: translateY(8px); opacity: 0; } 12% { transform: none; opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* Title cards */
+  #card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+          background: inherit; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+  #card.on { opacity: 1; }
+  #card .big { font-size: 64px; font-weight: 800; letter-spacing: -.02em; }
+  #card .big span { color: var(--accent); }
+  #card .sub { margin-top: 16px; font-size: 26px; color: #d0d0ca; max-width: 900px; line-height: 1.4; }
+  #card .url { margin-top: 34px; font: 600 24px/1 Consolas, monospace; color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="left">
+    <div class="brand">Clozed MCQ<span id="step"></span></div>
+    <h1 id="title"></h1>
+    <div class="say" id="say"></div>
+    <div class="source" id="source"><div class="label">Text field</div><pre id="src"></pre></div>
+  </div>
+  <div class="phone"><iframe id="anki" title="Anki card"></iframe></div>
+  <div class="tag">Rendered by the real Clozed MCQ templates</div>
+  <div id="keys"></div>
+  <div id="cursor"></div>
+  <div id="card"><div class="big" id="cardBig"></div><div class="sub" id="cardSub"></div><div class="url" id="cardUrl"></div></div>
+</div>
+
+<script>
+const TEMPLATES = {"front": "<div class=\"question\" id=\"cmcq-question\">{{cloze:Text}}<\/div>\n<div class=\"cmcq-panel\" id=\"cmcq-panel\"><\/div>\n\n<script>\n// anki-persistence v0.5.3 by Simon Lammer (MIT): https://github.com/SimonLammer/anki-persistence\nif(void 0===window.Persistence){var _persistenceKey=\"github.com/SimonLammer/anki-persistence/\",_defaultKey=\"_default\";if(window.Persistence_sessionStorage=function(){var e=!1;try{\"object\"==typeof window.sessionStorage&&(e=!0,this.clear=function(){for(var e=0;e<sessionStorage.length;e++){var t=sessionStorage.key(e);0==t.indexOf(_persistenceKey)&&(sessionStorage.removeItem(t),e--)}},this.setItem=function(e,t){void 0==t&&(t=e,e=_defaultKey),sessionStorage.setItem(_persistenceKey+e,JSON.stringify(t))},this.getItem=function(e){return void 0==e&&(e=_defaultKey),JSON.parse(sessionStorage.getItem(_persistenceKey+e))},this.removeItem=function(e){void 0==e&&(e=_defaultKey),sessionStorage.removeItem(_persistenceKey+e)})}catch(e){}this.isAvailable=function(){return e}},window.Persistence_windowKey=function(e){var t=window[e],i=!1;\"object\"==typeof t&&(i=!0,this.clear=function(){t[_persistenceKey]={}},this.setItem=function(e,i){void 0==i&&(i=e,e=_defaultKey),t[_persistenceKey][e]=i},this.getItem=function(e){return void 0==e&&(e=_defaultKey),void 0==t[_persistenceKey][e]?null:t[_persistenceKey][e]},this.removeItem=function(e){void 0==e&&(e=_defaultKey),delete t[_persistenceKey][e]},void 0==t[_persistenceKey]&&this.clear()),this.isAvailable=function(){return i}},window.Persistence=new Persistence_sessionStorage,Persistence.isAvailable()||(window.Persistence=new Persistence_windowKey(\"py\")),!Persistence.isAvailable()){var titleStartIndex=window.location.toString().indexOf(\"title\"),titleContentIndex=window.location.toString().indexOf(\"main\",titleStartIndex);titleStartIndex>0&&titleContentIndex>0&&titleContentIndex-titleStartIndex<10&&(window.Persistence=new Persistence_windowKey(\"qt\"))}}\n<\/script>\n\n<script>\n// Clozed MCQ core: shared by the front and back templates.\n// Reads the cloze HTML Anki renders, pulls each blank's \";;\" choice list,\n// and strips those lists from everything the user can see.\nwindow.ClozedMCQ = (function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Separates the answer from its distractors inside a cloze, as in\n  // c1::Metformin;;Phenformin;;Buformin\n  // (No double curly braces anywhere in this script: Anki reads them as field tags.)\n  var LIST = ';;';\n\n  // Options longer than this many characters stack as full-width rows.\n  var LONG_OPTION = 24;\n\n  // Key used to carry the picks from the front to the back.\n  var STORE_KEY = 'clozed-mcq';\n\n  // ===================================================================\n\n  function isCloze(n) {\n    return n.nodeType === 1 && n.matches('.cloze, .cloze-inactive');\n  }\n\n  function textOf(html) {\n    var d = document.createElement('div');\n    d.innerHTML = html;\n    return d.textContent;\n  }\n\n  function norm(html) {\n    return textOf(html).replace(/\\s+/g, ' ').trim().toLowerCase();\n  }\n\n  // First text node holding the list marker in this cloze's own content,\n  // skipping nested clozes (they own their own lists)\n  function firstListText(root) {\n    var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {\n      acceptNode: function (n) { return isCloze(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }\n    });\n    for (var n = walker.nextNode(); n; n = walker.nextNode()) {\n      if (n.nodeType === 3 && n.data.indexOf(LIST) >= 0) return n;\n    }\n    return null;\n  }\n\n  // Removes the cloze's own list from the DOM and returns its items as HTML\n  function cutList(root) {\n    var t = firstListText(root);\n    if (!t) return [];\n    var range = document.createRange();\n    range.setStart(t, t.data.indexOf(LIST));\n    range.setEnd(root, root.childNodes.length);\n    var box = document.createElement('div');\n    box.appendChild(range.extractContents());\n    return box.innerHTML.split(LIST)\n      .map(function (s) { return s.trim(); })\n      .filter(function (s) { return norm(s) !== ''; });\n  }\n\n  // Every blank shown as text (other clozes, or the answer side) loses its list\n  function cleanVisible(root) {\n    root.querySelectorAll('.cloze-inactive, .cloze:not([data-cloze])').forEach(cutList);\n  }\n\n  // Front side: the active blank's answer and distractors\n  function readActive(span) {\n    var box = document.createElement('div');\n    box.innerHTML = span.getAttribute('data-cloze');\n    var distractors = cutList(box);\n    box.querySelectorAll('.cloze, .cloze-inactive').forEach(function (s) {\n      cutList(s);\n      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);\n      s.remove();\n    });\n\n    // Hint written before the list: Anki put \"hint;;a;;b\" in the brackets\n    var m = span.innerHTML.match(/^\\[([\\s\\S]*)\\]$/);\n    if (m && m[1].indexOf(LIST) >= 0) {\n      var parts = m[1].split(LIST).map(function (s) { return s.trim(); });\n      span.innerHTML = '[' + (parts[0] || '...') + ']';\n      parts.slice(1).forEach(function (p) { if (p) distractors.push(p); });\n    }\n    return { span: span, answer: box.innerHTML.trim(), distractors: distractors };\n  }\n\n  // A blank with no list of its own borrows the other answers on this card\n  function borrowSiblings(blanks) {\n    blanks.forEach(function (b) {\n      if (b.distractors.length) return;\n      b.distractors = blanks\n        .filter(function (o) { return o !== b && norm(o.answer) !== norm(b.answer); })\n        .map(function (o) { return o.answer; });\n    });\n  }\n\n  function shuffle(a) {\n    for (var i = a.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var t = a[i]; a[i] = a[j]; a[j] = t;\n    }\n    return a;\n  }\n\n  // One option per distinct text; the answer wins over the same text listed as a distractor\n  function buildOptions(blank) {\n    var seen = {}, out = [];\n    function add(html, correct) {\n      var k = norm(html);\n      if (seen[k]) { if (correct) seen[k].correct = true; return; }\n      seen[k] = { html: html, correct: correct };\n      out.push(seen[k]);\n    }\n    add(blank.answer, true);\n    blank.distractors.forEach(function (d) { add(d, false); });\n    return shuffle(out);\n  }\n\n  // Ties saved picks to this exact card so a stale save is never applied\n  function signature(answers) {\n    return answers.map(norm).join('␞');\n  }\n\n  function isLong(options) {\n    return options.some(function (o) { return textOf(o.html).length > LONG_OPTION; });\n  }\n\n  // Front: every active blank with its options; blanks with nothing to offer get none\n  function readFront(question) {\n    var blanks = Array.prototype.map.call(question.querySelectorAll('.cloze[data-cloze]'), readActive);\n    cleanVisible(question);\n    borrowSiblings(blanks);\n    blanks.forEach(function (b) { if (b.distractors.length) b.options = buildOptions(b); });\n    return blanks;\n  }\n\n  function save(data) {\n    if (window.Persistence && Persistence.isAvailable()) Persistence.setItem(STORE_KEY, data);\n  }\n\n  function load() {\n    if (!window.Persistence || !Persistence.isAvailable()) return null;\n    var data = Persistence.getItem(STORE_KEY);\n    Persistence.removeItem(STORE_KEY);\n    return data;\n  }\n\n  return {\n    readFront: readFront, cleanVisible: cleanVisible, signature: signature,\n    isLong: isLong, norm: norm, save: save, load: load\n  };\n})();\n<\/script>\n\n<script>\n(function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Keys that open the next / previous blank's choices. Use lowercase.\n  var KEYS_NEXT = ['tab', 'arrowright', 'c', 'q'];\n  var KEYS_PREV = ['arrowleft'];\n  // Key that closes the open choices. Number keys 1 to 9 pick a choice.\n  var KEYS_CLOSE = ['escape'];\n\n  // ===================================================================\n\n  var C = window.ClozedMCQ;\n  var question = document.getElementById('cmcq-question');\n  var panel = document.getElementById('cmcq-panel');\n  window.ClozedMCQActive = null;\n  if (!question || !panel) return;\n\n  var blanks = C.readFront(question);\n  var state = {\n    sig: C.signature(blanks.map(function (b) { return b.answer; })),\n    picks: blanks.map(function () { return null; })\n  };\n  var current = null, last = null;\n  C.save(state);\n\n  var choosable = [];\n  blanks.forEach(function (b, i) {\n    if (!b.options) return;\n    choosable.push(i);\n    b.span.classList.add('has-choices');\n    b.span.setAttribute('role', 'button');\n    b.span.addEventListener('click', function (e) {\n      e.stopPropagation();\n      if (current === i) close(); else open(i);\n    });\n  });\n  if (!choosable.length) return;\n\n  function open(i) {\n    var b = blanks[i];\n    current = i;\n    blanks.forEach(function (o, j) { o.span.classList.toggle('open', i === j); });\n    var label = blanks.length > 1 ? 'Blank ' + (i + 1) + ' of ' + blanks.length : 'Choose';\n    panel.innerHTML = '<div class=\"cmcq-label\">' + label + '<\/div>' +\n      '<div class=\"cmcq-options' + (C.isLong(b.options) ? ' rows' : '') + '\">' +\n      b.options.map(function (o, k) {\n        return '<button type=\"button\" data-k=\"' + k + '\">' + (k < 9 ? '<kbd>' + (k + 1) + '<\/kbd>' : '') + o.html + '<\/button>';\n      }).join('') + '<\/div>';\n    panel.querySelectorAll('button').forEach(function (btn) {\n      btn.addEventListener('click', function (e) {\n        e.stopPropagation();\n        pick(+btn.getAttribute('data-k'));\n      });\n    });\n  }\n\n  function close() {\n    if (current !== null) last = current;\n    current = null;\n    blanks.forEach(function (o) { o.span.classList.remove('open'); });\n    panel.innerHTML = '';\n  }\n\n  // Picking fills the blank and closes; the next blank stays closed so it can be recalled\n  function pick(k) {\n    if (current === null) return;\n    var b = blanks[current], o = b.options[k];\n    if (!o) return;\n    state.picks[current] = { html: o.html, correct: o.correct };\n    b.span.innerHTML = o.html;\n    b.span.classList.add('picked');\n    C.save(state);\n    close();\n  }\n\n  // Moves on from the open blank, or from the last one used once it has closed\n  function step(dir) {\n    var at = choosable.indexOf(current !== null ? current : last);\n    var next = at < 0 ? (dir > 0 ? 0 : choosable.length - 1) : (at + dir + choosable.length) % choosable.length;\n    open(choosable[next]);\n  }\n\n  window.ClozedMCQActive = {\n    isOpen: function () { return current !== null; },\n    pick: pick, close: close, step: step,\n    keys: { next: KEYS_NEXT, prev: KEYS_PREV, close: KEYS_CLOSE }\n  };\n\n  // Anki desktop keeps one page between cards, so the key handler is installed once\n  // and always talks to whichever card is showing.\n  if (!window.ClozedMCQKeys) {\n    window.ClozedMCQKeys = true;\n    document.addEventListener('keydown', function (e) {\n      var c = window.ClozedMCQActive;\n      if (!c || e.ctrlKey || e.metaKey || e.altKey) return;\n      var key = e.key.toLowerCase();\n      if (/^[1-9]$/.test(key) && c.isOpen()) { c.pick(+key - 1); e.preventDefault(); return; }\n      if (c.keys.close.indexOf(key) >= 0 && c.isOpen()) { c.close(); return; }\n      var back = c.keys.prev.indexOf(key) >= 0 || (key === 'tab' && e.shiftKey);\n      var fwd = !back && c.keys.next.indexOf(key) >= 0;\n      if (!back && !fwd) return;\n      e.preventDefault();\n      c.step(back ? -1 : 1);\n    });\n  }\n})();\n<\/script>\n", "back": "<div class=\"cmcq-check\" id=\"cmcq-check\"><\/div>\n\n<div class=\"question\" id=\"cmcq-question\">{{cloze:Text}}<\/div>\n\n{{#Back Extra}}\n<div class=\"extra\">{{Back Extra}}<\/div>\n{{/Back Extra}}\n\n<div class=\"cmcq-resources\" id=\"cmcq-resources\">\n{{#Lecture Notes}}<div class=\"cmcq-res\" data-name=\"Lecture Notes\"><button type=\"button\" class=\"cmcq-res-btn\">Lecture Notes<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Lecture Notes}}<\/div><\/div>{{/Lecture Notes}}\n{{#Missed Questions}}<div class=\"cmcq-res\" data-name=\"Missed Questions\"><button type=\"button\" class=\"cmcq-res-btn\">Missed Questions<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Missed Questions}}<\/div><\/div>{{/Missed Questions}}\n{{#Pathoma}}<div class=\"cmcq-res\" data-name=\"Pathoma\"><button type=\"button\" class=\"cmcq-res-btn\">Pathoma<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Pathoma}}<\/div><\/div>{{/Pathoma}}\n{{#Boards and Beyond}}<div class=\"cmcq-res\" data-name=\"Boards and Beyond\"><button type=\"button\" class=\"cmcq-res-btn\">Boards and Beyond<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Boards and Beyond}}<\/div><\/div>{{/Boards and Beyond}}\n{{#First Aid}}<div class=\"cmcq-res\" data-name=\"First Aid\"><button type=\"button\" class=\"cmcq-res-btn\">First Aid<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{First Aid}}<\/div><\/div>{{/First Aid}}\n{{#Sketchy}}<div class=\"cmcq-res\" data-name=\"Sketchy\"><button type=\"button\" class=\"cmcq-res-btn\">Sketchy<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Sketchy}}<\/div><\/div>{{/Sketchy}}\n{{#Sketchy 2}}<div class=\"cmcq-res\" data-name=\"Sketchy 2\"><button type=\"button\" class=\"cmcq-res-btn\">Sketchy 2<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Sketchy 2}}<\/div><\/div>{{/Sketchy 2}}\n{{#Sketchy Extra}}<div class=\"cmcq-res\" data-name=\"Sketchy Extra\"><button type=\"button\" class=\"cmcq-res-btn\">Sketchy Extra<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Sketchy Extra}}<\/div><\/div>{{/Sketchy Extra}}\n{{#Picmonic}}<div class=\"cmcq-res\" data-name=\"Picmonic\"><button type=\"button\" class=\"cmcq-res-btn\">Picmonic<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Picmonic}}<\/div><\/div>{{/Picmonic}}\n{{#Pixorize}}<div class=\"cmcq-res\" data-name=\"Pixorize\"><button type=\"button\" class=\"cmcq-res-btn\">Pixorize<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Pixorize}}<\/div><\/div>{{/Pixorize}}\n{{#Physeo}}<div class=\"cmcq-res\" data-name=\"Physeo\"><button type=\"button\" class=\"cmcq-res-btn\">Physeo<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Physeo}}<\/div><\/div>{{/Physeo}}\n{{#Bootcamp}}<div class=\"cmcq-res\" data-name=\"Bootcamp\"><button type=\"button\" class=\"cmcq-res-btn\">Bootcamp<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Bootcamp}}<\/div><\/div>{{/Bootcamp}}\n{{#OME}}<div class=\"cmcq-res\" data-name=\"OME\"><button type=\"button\" class=\"cmcq-res-btn\">OME<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{OME}}<\/div><\/div>{{/OME}}\n{{#Additional Resources}}<div class=\"cmcq-res\" data-name=\"Additional Resources\"><button type=\"button\" class=\"cmcq-res-btn\">Additional Resources<\/button><div class=\"cmcq-res-body\" dir=\"auto\" hidden>{{Additional Resources}}<\/div><\/div>{{/Additional Resources}}\n<\/div>\n<div id=\"cmcq-tags\" hidden>{{Tags}}<\/div>\n\n<script>\n// anki-persistence v0.5.3 by Simon Lammer (MIT): https://github.com/SimonLammer/anki-persistence\nif(void 0===window.Persistence){var _persistenceKey=\"github.com/SimonLammer/anki-persistence/\",_defaultKey=\"_default\";if(window.Persistence_sessionStorage=function(){var e=!1;try{\"object\"==typeof window.sessionStorage&&(e=!0,this.clear=function(){for(var e=0;e<sessionStorage.length;e++){var t=sessionStorage.key(e);0==t.indexOf(_persistenceKey)&&(sessionStorage.removeItem(t),e--)}},this.setItem=function(e,t){void 0==t&&(t=e,e=_defaultKey),sessionStorage.setItem(_persistenceKey+e,JSON.stringify(t))},this.getItem=function(e){return void 0==e&&(e=_defaultKey),JSON.parse(sessionStorage.getItem(_persistenceKey+e))},this.removeItem=function(e){void 0==e&&(e=_defaultKey),sessionStorage.removeItem(_persistenceKey+e)})}catch(e){}this.isAvailable=function(){return e}},window.Persistence_windowKey=function(e){var t=window[e],i=!1;\"object\"==typeof t&&(i=!0,this.clear=function(){t[_persistenceKey]={}},this.setItem=function(e,i){void 0==i&&(i=e,e=_defaultKey),t[_persistenceKey][e]=i},this.getItem=function(e){return void 0==e&&(e=_defaultKey),void 0==t[_persistenceKey][e]?null:t[_persistenceKey][e]},this.removeItem=function(e){void 0==e&&(e=_defaultKey),delete t[_persistenceKey][e]},void 0==t[_persistenceKey]&&this.clear()),this.isAvailable=function(){return i}},window.Persistence=new Persistence_sessionStorage,Persistence.isAvailable()||(window.Persistence=new Persistence_windowKey(\"py\")),!Persistence.isAvailable()){var titleStartIndex=window.location.toString().indexOf(\"title\"),titleContentIndex=window.location.toString().indexOf(\"main\",titleStartIndex);titleStartIndex>0&&titleContentIndex>0&&titleContentIndex-titleStartIndex<10&&(window.Persistence=new Persistence_windowKey(\"qt\"))}}\n<\/script>\n\n<script>\n// Clozed MCQ core: shared by the front and back templates.\n// Reads the cloze HTML Anki renders, pulls each blank's \";;\" choice list,\n// and strips those lists from everything the user can see.\nwindow.ClozedMCQ = (function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Separates the answer from its distractors inside a cloze, as in\n  // c1::Metformin;;Phenformin;;Buformin\n  // (No double curly braces anywhere in this script: Anki reads them as field tags.)\n  var LIST = ';;';\n\n  // Options longer than this many characters stack as full-width rows.\n  var LONG_OPTION = 24;\n\n  // Key used to carry the picks from the front to the back.\n  var STORE_KEY = 'clozed-mcq';\n\n  // ===================================================================\n\n  function isCloze(n) {\n    return n.nodeType === 1 && n.matches('.cloze, .cloze-inactive');\n  }\n\n  function textOf(html) {\n    var d = document.createElement('div');\n    d.innerHTML = html;\n    return d.textContent;\n  }\n\n  function norm(html) {\n    return textOf(html).replace(/\\s+/g, ' ').trim().toLowerCase();\n  }\n\n  // First text node holding the list marker in this cloze's own content,\n  // skipping nested clozes (they own their own lists)\n  function firstListText(root) {\n    var walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {\n      acceptNode: function (n) { return isCloze(n) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }\n    });\n    for (var n = walker.nextNode(); n; n = walker.nextNode()) {\n      if (n.nodeType === 3 && n.data.indexOf(LIST) >= 0) return n;\n    }\n    return null;\n  }\n\n  // Removes the cloze's own list from the DOM and returns its items as HTML\n  function cutList(root) {\n    var t = firstListText(root);\n    if (!t) return [];\n    var range = document.createRange();\n    range.setStart(t, t.data.indexOf(LIST));\n    range.setEnd(root, root.childNodes.length);\n    var box = document.createElement('div');\n    box.appendChild(range.extractContents());\n    return box.innerHTML.split(LIST)\n      .map(function (s) { return s.trim(); })\n      .filter(function (s) { return norm(s) !== ''; });\n  }\n\n  // Every blank shown as text (other clozes, or the answer side) loses its list\n  function cleanVisible(root) {\n    root.querySelectorAll('.cloze-inactive, .cloze:not([data-cloze])').forEach(cutList);\n  }\n\n  // Front side: the active blank's answer and distractors\n  function readActive(span) {\n    var box = document.createElement('div');\n    box.innerHTML = span.getAttribute('data-cloze');\n    var distractors = cutList(box);\n    box.querySelectorAll('.cloze, .cloze-inactive').forEach(function (s) {\n      cutList(s);\n      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);\n      s.remove();\n    });\n\n    // Hint written before the list: Anki put \"hint;;a;;b\" in the brackets\n    var m = span.innerHTML.match(/^\\[([\\s\\S]*)\\]$/);\n    if (m && m[1].indexOf(LIST) >= 0) {\n      var parts = m[1].split(LIST).map(function (s) { return s.trim(); });\n      span.innerHTML = '[' + (parts[0] || '...') + ']';\n      parts.slice(1).forEach(function (p) { if (p) distractors.push(p); });\n    }\n    return { span: span, answer: box.innerHTML.trim(), distractors: distractors };\n  }\n\n  // A blank with no list of its own borrows the other answers on this card\n  function borrowSiblings(blanks) {\n    blanks.forEach(function (b) {\n      if (b.distractors.length) return;\n      b.distractors = blanks\n        .filter(function (o) { return o !== b && norm(o.answer) !== norm(b.answer); })\n        .map(function (o) { return o.answer; });\n    });\n  }\n\n  function shuffle(a) {\n    for (var i = a.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var t = a[i]; a[i] = a[j]; a[j] = t;\n    }\n    return a;\n  }\n\n  // One option per distinct text; the answer wins over the same text listed as a distractor\n  function buildOptions(blank) {\n    var seen = {}, out = [];\n    function add(html, correct) {\n      var k = norm(html);\n      if (seen[k]) { if (correct) seen[k].correct = true; return; }\n      seen[k] = { html: html, correct: correct };\n      out.push(seen[k]);\n    }\n    add(blank.answer, true);\n    blank.distractors.forEach(function (d) { add(d, false); });\n    return shuffle(out);\n  }\n\n  // Ties saved picks to this exact card so a stale save is never applied\n  function signature(answers) {\n    return answers.map(norm).join('␞');\n  }\n\n  function isLong(options) {\n    return options.some(function (o) { return textOf(o.html).length > LONG_OPTION; });\n  }\n\n  // Front: every active blank with its options; blanks with nothing to offer get none\n  function readFront(question) {\n    var blanks = Array.prototype.map.call(question.querySelectorAll('.cloze[data-cloze]'), readActive);\n    cleanVisible(question);\n    borrowSiblings(blanks);\n    blanks.forEach(function (b) { if (b.distractors.length) b.options = buildOptions(b); });\n    return blanks;\n  }\n\n  function save(data) {\n    if (window.Persistence && Persistence.isAvailable()) Persistence.setItem(STORE_KEY, data);\n  }\n\n  function load() {\n    if (!window.Persistence || !Persistence.isAvailable()) return null;\n    var data = Persistence.getItem(STORE_KEY);\n    Persistence.removeItem(STORE_KEY);\n    return data;\n  }\n\n  return {\n    readFront: readFront, cleanVisible: cleanVisible, signature: signature,\n    isLong: isLong, norm: norm, save: save, load: load\n  };\n})();\n<\/script>\n\n<script>\n(function () {\n  var C = window.ClozedMCQ;\n  window.ClozedMCQActive = null;\n  var question = document.getElementById('cmcq-question');\n  var check = document.getElementById('cmcq-check');\n  if (!question) return;\n\n  C.cleanVisible(question);\n  var spans = Array.prototype.slice.call(question.querySelectorAll('.cloze'));\n  var saved = C.load();\n  if (!saved || saved.sig !== C.signature(spans.map(function (s) { return s.innerHTML; }))) return;\n\n  // Only picked blanks are graded; untouched blanks were recalled and the user grades those\n  var picked = 0, allRight = true;\n  spans.forEach(function (span, i) {\n    var p = saved.picks[i];\n    if (!p) return;\n    picked++;\n    if (p.correct) { span.classList.add('cmcq-ok'); return; }\n    allRight = false;\n    span.classList.add('cmcq-missed');\n    var wrong = document.createElement('s');\n    wrong.className = 'cmcq-wrong';\n    wrong.innerHTML = p.html;\n    span.parentNode.insertBefore(wrong, span);\n  });\n  if (!picked || !check) return;\n  check.textContent = allRight ? 'Correct' : 'Wrong';\n  check.className = 'cmcq-check ' + (allRight ? 'success' : 'error');\n})();\n<\/script>\n\n<script>\n// Resource fields (Lecture Notes, Pixorize, ...) behave like the AnKing note type's\n// hint buttons, with the same setting names so AnKing users can copy theirs across.\n(function () {\n  // ===================================================================\n  // --- CONFIGURATION ---\n  // ===================================================================\n\n  // Shortcut per field, written like \"Alt + 1\". Leave \"\" for none.\n  var ButtonShortcuts = {\n    \"Lecture Notes\": \"Alt + 1\",\n    \"Missed Questions\": \"Alt + 2\",\n    \"Pathoma\": \"Alt + 3\",\n    \"Boards and Beyond\": \"Alt + 4\",\n    \"First Aid\": \"Alt + 5\",\n    \"Sketchy\": \"Alt + 6\",\n    \"Sketchy 2\": \"\",\n    \"Sketchy Extra\": \"\",\n    \"Picmonic\": \"\",\n    \"Pixorize\": \"Alt + 7\",\n    \"Physeo\": \"Alt + 8\",\n    \"Bootcamp\": \"Alt + F2\",\n    \"OME\": \"Alt + F1\",\n    \"Additional Resources\": \"Alt + 9\"\n  };\n  var ToggleAllButtonsShortcut = \"'\";\n  var ToggleNextButtonShortcut = \"H\";\n\n  // Open a field automatically on every card. A tag such as autoopen::lecture_notes\n  // opens it on that note only.\n  var ButtonAutoReveal = {\n    \"Lecture Notes\": false,\n    \"Missed Questions\": false,\n    \"Pathoma\": false,\n    \"Boards and Beyond\": false,\n    \"First Aid\": false,\n    \"Sketchy\": false,\n    \"Sketchy 2\": false,\n    \"Sketchy Extra\": false,\n    \"Picmonic\": false,\n    \"Pixorize\": false,\n    \"Physeo\": false,\n    \"Bootcamp\": false,\n    \"OME\": false,\n    \"Additional Resources\": false\n  };\n\n  // Scroll an opened field into view.\n  var ScrollToButton = true;\n\n  // ===================================================================\n\n  var root = document.getElementById('cmcq-resources');\n  if (!root) return;\n  var tagsEl = document.getElementById('cmcq-tags');\n  var tags = (tagsEl ? tagsEl.textContent : '').toLowerCase().split(/\\s+/);\n\n  function toggle(res, open, noScroll) {\n    var body = res.querySelector('.cmcq-res-body');\n    if (open === undefined) open = body.hidden;\n    body.hidden = !open;\n    res.classList.toggle('expanded', open);\n    if (open && ScrollToButton && !noScroll && body.scrollIntoView) {\n      body.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });\n    }\n  }\n\n  root.querySelectorAll('.cmcq-res').forEach(function (res) {\n    var name = res.getAttribute('data-name');\n    var tag = 'autoopen::' + name.toLowerCase().replace(/ /g, '_');\n    res.querySelector('.cmcq-res-btn').addEventListener('click', function () { toggle(res); });\n    if (ButtonShortcuts[name]) res.title = 'Shortcut: ' + ButtonShortcuts[name];\n    if (ButtonAutoReveal[name] || tags.indexOf(tag) >= 0) toggle(res, true, true);\n  });\n\n  // \"Alt + 1\" -> matcher for keydown events\n  function matcher(shortcut) {\n    if (!shortcut) return function () { return false; };\n    var parts = shortcut.split('+').map(function (p) { return p.trim().toLowerCase(); });\n    var key = parts.pop();\n    var mods = { alt: parts.indexOf('alt') >= 0, ctrl: parts.indexOf('ctrl') >= 0, shift: parts.indexOf('shift') >= 0 };\n    return function (e) {\n      if (e.altKey !== mods.alt || e.ctrlKey !== mods.ctrl || (mods.shift && !e.shiftKey)) return false;\n      var code = (e.code || '').toLowerCase();\n      return e.key.toLowerCase() === key || code === 'digit' + key || code === 'key' + key || code === key;\n    };\n  }\n\n  window.ClozedMCQResources = {\n    toggle: toggle,\n    shortcuts: Object.keys(ButtonShortcuts).map(function (name) { return { name: name, match: matcher(ButtonShortcuts[name]) }; }),\n    all: matcher(ToggleAllButtonsShortcut),\n    next: matcher(ToggleNextButtonShortcut)\n  };\n\n  // Installed once: Anki desktop keeps one page between cards\n  if (!window.ClozedMCQResourceKeys) {\n    window.ClozedMCQResourceKeys = true;\n    document.addEventListener('keydown', function (e) {\n      var r = window.ClozedMCQResources, box = document.getElementById('cmcq-resources');\n      if (!r || !box || e.repeat) return;\n      var items = Array.prototype.slice.call(box.querySelectorAll('.cmcq-res'));\n      if (!items.length) return;\n      if (r.all(e)) { var anyClosed = items.some(function (i) { return !i.classList.contains('expanded'); }); items.forEach(function (i) { r.toggle(i, anyClosed, true); }); return; }\n      if (r.next(e)) { var next = items.filter(function (i) { return !i.classList.contains('expanded'); })[0]; if (next) r.toggle(next, true); return; }\n      r.shortcuts.forEach(function (s) {\n        if (!s.match(e)) return;\n        var item = box.querySelector('.cmcq-res[data-name=\"' + s.name + '\"]');\n        if (item) { e.preventDefault(); r.toggle(item); }\n      });\n    });\n  }\n})();\n<\/script>\n", "css": "/* ===================================================================\n   Clozed MCQ styling\n   Colours live in the variables below; night mode swaps them.\n   =================================================================== */\n.card {\n  --cloze: blue;\n  --choice: #c2410c;                       /* blank with choices behind it */\n  --choice-glow: rgba(234, 88, 12, 0.45);\n  --ok: #5f9e33;\n  --wrong: #F04A32;\n  --missed: #a16207;                       /* right answer you missed: dark amber, readable on white */\n  --pill: rgba(0, 0, 0, 0.06);\n  --pill-hover: rgba(0, 0, 0, 0.10);\n  --muted: #777;\n  --line: #ddd;\n  --hint: #4297F9;                         /* resource field text, as in AnKing */\n  --missed-q: red;\n\n  text-align: center;\n  margin: 0;\n  padding: 16px 12px 24px;\n  font-family: Menlo, Baskerville, sans-serif;\n  font-size: clamp(18px, 3vmin, 25px);\n  color: black;\n  background-color: white;\n}\n\n.card.nightMode, .card.night_mode, .nightMode .card, .night_mode .card {\n  --cloze: lightblue;\n  --choice: #fb923c;\n  --choice-glow: rgba(251, 146, 60, 0.5);\n  --ok: #8AC05E;\n  --missed: #F4E45F;\n  --pill: rgba(255, 255, 255, 0.07);\n  --pill-hover: rgba(255, 255, 255, 0.12);\n  --muted: #999;\n  --line: #444;\n  color: white;\n  background-color: #2f2f31;\n}\n\n.question {\n  font-size: clamp(20px, 4vmin, 30px);\n  line-height: 1.7;\n  padding: 2vh 1vw;\n  word-break: break-word;\n}\n\n.cloze { font-weight: bold; color: var(--cloze); }\n\n/* --- A blank with choices: own colour, gentle pulse, generous tap area --- */\n.cloze.has-choices {\n  color: var(--choice);\n  cursor: pointer;\n  border-radius: 6px;\n  padding: 2px 6px;\n  margin: -2px 0;\n  -webkit-tap-highlight-color: transparent;\n  animation: cmcq-pulse 2.4s ease-in-out infinite;\n}\n.cloze.has-choices.open {\n  animation: none;\n  background: var(--pill-hover);\n  box-shadow: 0 0 0 2px var(--choice-glow);\n}\n.cloze.has-choices.picked {\n  animation: none;\n  border-bottom: 2px solid var(--choice);\n  border-radius: 6px 6px 0 0;\n}\n@keyframes cmcq-pulse {\n  0%, 100% { box-shadow: 0 0 0 0 transparent; }\n  50%      { box-shadow: 0 0 10px 2px var(--choice-glow); }\n}\n@media (prefers-reduced-motion: reduce) {\n  .cloze.has-choices { animation: none; box-shadow: 0 0 6px 1px var(--choice-glow); }\n}\n\n/* --- Choices panel --- */\n.cmcq-panel { margin: 1vh auto 0; max-width: 640px; }\n.cmcq-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: system-ui, sans-serif; }\n.cmcq-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }\n.cmcq-options button {\n  font: inherit;\n  font-size: clamp(15px, 3vmin, 20px);\n  padding: 10px 14px;\n  border: 0;\n  border-radius: 10px;\n  background: var(--pill);\n  color: inherit;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n.cmcq-options button:hover { background: var(--pill-hover); }\n.cmcq-options button kbd { font: 11px/1 system-ui, sans-serif; opacity: .55; margin-right: 6px; }\n.cmcq-options.rows { flex-direction: column; align-items: stretch; }\n.cmcq-options.rows button { text-align: left; border-radius: 12px; }\n\n/* --- Answer side --- */\n.cloze.cmcq-ok { color: var(--ok); }\n.cloze.cmcq-missed { color: var(--missed); }\ns.cmcq-wrong { color: var(--wrong); font-weight: bold; margin-right: 6px; }\n.cmcq-check { position: fixed; top: 0; left: 0; padding: 2px 10px; font-weight: bold; font-size: 16px; }\n.cmcq-check.success { color: var(--ok); }\n.cmcq-check.error { color: var(--wrong); }\n\n.extra {\n  font-size: clamp(14px, 2.5vmin, 18px);\n  margin: 2vh auto 0;\n  padding-top: 1.5vh;\n  border-top: 1px solid var(--line);\n  max-width: 640px;\n}\n\n/* --- Resource fields (Lecture Notes, Pixorize, ...): AnKing-style buttons that open in place --- */\n.cmcq-resources {\n  max-width: 760px;\n  margin: 1.5vh auto 0;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: center;\n  gap: 6px;\n}\n.cmcq-res { display: contents; }\n.cmcq-res-btn {\n  font: 600 12px/1.2 system-ui, sans-serif;\n  padding: 6px 10px;\n  border: 1px solid #525253;\n  border-radius: 6px;\n  background: #424242;\n  color: white;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n.cmcq-res-btn:hover { background: #555; }\n.cmcq-res.expanded .cmcq-res-btn { flex-basis: 100%; font-weight: bold; }\n.cmcq-res-body {\n  flex-basis: 100%;\n  text-align: left;\n  font-size: .85rem;\n  font-style: italic;\n  color: var(--hint);\n  padding: 4px 6px 8px;\n}\n.cmcq-res[data-name=\"Missed Questions\"] .cmcq-res-body { color: var(--missed-q); }\n.cmcq-res-body img { max-width: 100%; height: auto; }\n\nimg { display: block; max-width: 100%; margin: 10px auto; }\n", "fields": ["Text", "Back Extra", "Lecture Notes", "Missed Questions", "Pathoma", "Boards and Beyond", "First Aid", "Sketchy", "Sketchy 2", "Sketchy Extra", "Picmonic", "Pixorize", "Physeo", "Bootcamp", "OME", "Additional Resources", "One by one"]};
+</script>
+<script>
+// A small stand-in for Anki's reviewer, shared by the preview page and the demo stage.
+// Expects a global TEMPLATES ({ front, back, css, fields }) written in by build.py.
+
+// ---- Cloze renderer (mirrors the HTML from Anki's rslib/src/cloze.rs) ----
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function parseNote(src) {
+  const root = { kids: [] }, stack = [root];
+  let i = 0, buf = '';
+  const flush = () => { if (buf) { stack[stack.length - 1].kids.push(buf); buf = ''; } };
+  while (i < src.length) {
+    const m = src.slice(i).match(/^\{\{c(\d+(?:,\d+)*)::/);
+    if (m) {
+      flush();
+      const node = { ords: m[1].split(',').map(Number), kids: [] };
+      stack[stack.length - 1].kids.push(node); stack.push(node);
+      i += m[0].length; continue;
+    }
+    if (src.startsWith('}}', i) && stack.length > 1) {
+      flush();
+      const node = stack.pop();
+      // Anki splits the hint off the first text node at the first "::"
+      if (typeof node.kids[0] === 'string') {
+        const k = node.kids[0].indexOf('::');
+        if (k >= 0) { node.hint = node.kids[0].slice(k + 2); node.kids[0] = node.kids[0].slice(0, k); }
+      }
+      i += 2; continue;
+    }
+    buf += src[i++];
+  }
+  flush();
+  return root.kids;
+}
+
+function ordsOf(nodes, out = new Set()) {
+  nodes.forEach(n => { if (typeof n !== 'string') { n.ords.forEach(o => out.add(o)); ordsOf(n.kids, out); } });
+  return [...out].sort((a, b) => a - b);
+}
+
+function renderNodes(nodes, ord, question) {
+  return nodes.map(n => typeof n === 'string' ? n : renderCloze(n, ord, question)).join('');
+}
+
+function renderCloze(n, ord, question) {
+  const active = n.ords.includes(ord);
+  const inner = renderNodes(n.kids, ord, question);
+  if (active && question) return `<span class="cloze" data-cloze="${esc(inner)}" data-ordinal="${ord}">[${n.hint ?? '...'}]</span>`;
+  if (active) return `<span class="cloze" data-ordinal="${ord}">${inner}</span>`;
+  return `<span class="cloze-inactive" data-ordinal="${n.ords[0]}">${inner}</span>`;
+}
+
+// ---- Anki-style field substitution ----
+function renderTemplate(tpl, fields, ord, question) {
+  tpl = tpl.replace(/\{\{([#^])([^}]+)\}\}([\s\S]*?)\{\{\/\2\}\}/g, (_, kind, name, body) => {
+    const filled = (fields[name.trim()] || '').trim() !== '';
+    return (kind === '#') === filled ? body : '';
+  });
+  return tpl.replace(/\{\{([^}]+)\}\}/g, (_, ref) => {
+    const m = ref.match(/^cloze:(.+)$/);
+    if (m) return renderNodes(parseNote(fields[m[1].trim()] || ''), ord, question);
+    const name = ref.trim();
+    // Anki refuses a template that names a field the note type does not have
+    if (!TEMPLATES.fields.includes(name) && name !== 'Tags') throw new Error(`Template names "${name}", which is not a field`);
+    return fields[name] ?? '';
+  });
+}
+
+// ---- The reviewer: one page, card HTML swapped in, scripts re-run, like Anki desktop ----
+function mountReviewer(frame, onReady) {
+  frame.srcdoc = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>${TEMPLATES.css}</style></head><body class="card"><div id="qa"></div>
+<script>
+window.py = {};   // Anki desktop exposes this; anki-persistence stores picks on it
+window.setQA = function (html) {
+  var qa = document.getElementById('qa');
+  qa.innerHTML = html;
+  qa.querySelectorAll('script').forEach(function (old) {
+    var s = document.createElement('script');
+    s.textContent = old.textContent;
+    old.replaceWith(s);
+  });
+};
+<\/script></body></html>`;
+  frame.onload = onReady;
+  return {
+    show(fields, ord, question) {
+      frame.contentWindow.setQA(renderTemplate(question ? TEMPLATES.front : TEMPLATES.back, fields, ord, question));
+    },
+    night(on) {
+      frame.contentDocument.body.className = 'card' + (on ? ' nightMode night_mode' : '');
+    },
+  };
+}
+</script>
+<script>
+// =====================================================================
+// Stage controls used by the scenes
+// =====================================================================
+const $ = id => document.getElementById(id);
+const frame = $('anki');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let note = {}, ord = 1, cursorPos = { x: 1000, y: 700 };
+
+function highlight(src) {
+  return esc(src)
+    .replace(/\{\{(c\d+(?:,\d+)*)::/g, '<span class="brace">{{</span><span class="ord">$1</span><span class="brace">::</span>')
+    .replace(/\}\}/g, '<span class="brace">}}</span>')
+    .replace(/;;/g, '<span class="sep">;;</span>');
+}
+
+const stage = {
+  async say(html) {
+    const el = $('say');
+    if (el.innerHTML === html) return;
+    el.classList.add('out'); await wait(220);
+    el.innerHTML = html; el.classList.remove('out');
+  },
+  setNote(n, cardOrd = 1, { showSource = true } = {}) {
+    note = n; ord = cardOrd;
+    $('src').innerHTML = highlight(n.text);
+    $('source').classList.toggle('hidden', !showSource);
+  },
+  fields() {
+    return Object.assign({ 'Text': note.text, 'Back Extra': note.extra || '', 'Tags': note.tags || '' }, note.more || {});
+  },
+  front() { reviewer.show(stage.fields(), ord, true); frame.contentWindow.scrollTo(0, 0); },
+  back() { reviewer.show(stage.fields(), ord, false); frame.contentWindow.scrollTo(0, 0); },
+  night(on) { reviewer.night(on); },
+  doc() { return frame.contentDocument; },
+
+  async type(text, cps = 26) {
+    $('source').classList.remove('hidden');
+    for (let i = 0; i <= text.length; i++) {
+      $('src').innerHTML = highlight(text.slice(0, i)) + '<span class="caret"></span>';
+      await wait(1000 / cps);
+    }
+    $('src').innerHTML = highlight(text);
+  },
+
+  // Moves the on-screen cursor to an element inside the card, taps, and clicks it
+  async tap(target, { hold = 250 } = {}) {
+    const el = typeof target === 'string' ? stage.doc().querySelector(target) : target;
+    if (!el) throw new Error('tap target missing: ' + target);
+    el.scrollIntoView({ block: 'nearest' });
+    await wait(60);
+    const f = frame.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const x = f.left + r.left + Math.min(r.width / 2, 60), y = f.top + r.top + r.height / 2;
+    const c = $('cursor');
+    c.style.opacity = 1;
+    c.style.setProperty('--pos', `translate(${x}px, ${y}px)`);
+    cursorPos = { x, y };
+    await wait(700);
+    c.classList.add('down');
+    const rip = document.createElement('div');
+    rip.className = 'ripple'; rip.style.left = x + 'px'; rip.style.top = y + 'px';
+    $('stage').appendChild(rip); setTimeout(() => rip.remove(), 700);
+    el.click();
+    await wait(160); c.classList.remove('down');
+    await wait(hold);
+  },
+  // Taps the choice button whose text matches
+  async choose(text, opts) {
+    const btn = [...stage.doc().querySelectorAll('#cmcq-panel button')].find(b => b.textContent.replace(/^\d/, '').trim() === text);
+    return stage.tap(btn, opts);
+  },
+  blank(i = 0) { return stage.doc().querySelectorAll('.cloze[data-cloze]')[i]; },
+  resource(name) { return stage.doc().querySelector(`.cmcq-res[data-name="${name}"] .cmcq-res-btn`); },
+  hideCursor() { $('cursor').style.opacity = 0; },
+
+  // Shows a keycap and sends the key to the card
+  async key(label, init) {
+    const cap = document.createElement('div');
+    cap.className = 'keycap'; cap.textContent = label;
+    $('keys').innerHTML = ''; $('keys').appendChild(cap);
+    stage.hideCursor();
+    await wait(180);
+    const w = frame.contentWindow;
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', Object.assign({ bubbles: true }, init)));
+    await wait(750);
+  },
+
+  async titleCard(big, sub, url = '') {
+    $('cardBig').innerHTML = big; $('cardSub').innerHTML = sub; $('cardUrl').textContent = url;
+    $('card').classList.add('on');
+  },
+  reset(n, total, title) {
+    $('card').classList.remove('on');
+    $('step').textContent = n ? `${n} / ${total}` : '';
+    $('title').innerHTML = title || '';
+    $('say').innerHTML = '';
+    $('keys').innerHTML = '';
+    stage.hideCursor();
+    stage.night(false);
+  },
+};
+
+// =====================================================================
+// Notes used in the demos
+// =====================================================================
+const DRUG = {
+  text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes because it {{c2::reduces hepatic {{c3::gluconeogenesis;;glycogenolysis;;lipolysis;;ketogenesis}};;increases insulin release;;slows gastric emptying;;blocks renal glucose reabsorption}}.',
+  extra: 'Metformin activates AMPK and lowers hepatic glucose output.',
+};
+const DRUG_SHORT = {
+  text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes.',
+  extra: 'Metformin activates AMPK and lowers hepatic glucose output.',
+};
+const PUMP = {
+  text: 'The Na+/K+ ATPase pumps 3 {{c1::Na+;;K+;;Ca2+;;Cl-}} out and 2 {{c1::K+;;Na+;;H+}} in per ATP.',
+  extra: 'Net result: the cell interior becomes more negative.',
+};
+const GLYCOLYSIS = {
+  text: 'Glycolysis: glucose is phosphorylated by {{c1::hexokinase}}, rearranged by {{c1::phosphoglucose isomerase}}, then committed by {{c1::phosphofructokinase-1}}.',
+};
+const CANBERRA = { text: '{{c1::Canberra}} was founded in {{c2::1913}}.', extra: 'An ordinary cloze note, migrated as is.' };
+const ANKING = Object.assign({}, DRUG_SHORT, {
+  more: {
+    'Lecture Notes': 'Biguanides are first-line unless eGFR is below 30. <a href="#">Lecture 12 slides</a>',
+    'Missed Questions': 'Q42: picked a sulfonylurea instead of metformin.',
+    'Pixorize': '<a href="#">Metformin: the "met-forming" factory</a>',
+    'First Aid': 'FA 2026, p. 362',
+  },
+});
+
+// =====================================================================
+// Scenes: one per feature. Each one is recorded as its own clip.
+// =====================================================================
+const SCENES = [
+  { id: 'intro', title: '', run: async () => {
+    stage.setNote(DRUG_SHORT, 1, { showSource: false }); stage.front();
+    await stage.titleCard('Clozed <span>MCQ</span>', 'Multiple choice hidden behind your Anki cloze deletions.<br>Recall first. Tap only when you are stuck.');
+    await wait(3600);
+  } },
+
+  { id: 'recall-first', title: 'Recall first, tap when stuck', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.front();
+    await stage.say('Every card starts as a <b>normal cloze</b>. Try to recall the answer first.');
+    await wait(2600);
+    await stage.say('An <b>orange, glowing</b> blank has choices behind it. Tap it when you need them.');
+    await wait(1800);
+    await stage.tap(stage.blank(0), { hold: 900 });
+    await stage.say('Pick one. The blank fills in.');
+    await stage.choose('Metformin', { hold: 900 });
+    await stage.say('Flip the card: your pick is graded.');
+    await wait(500); stage.back(); stage.hideCursor();
+    await wait(2600);
+  } },
+
+  { id: 'wrong-pick', title: 'Wrong picks stay visible', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.front();
+    await stage.say('Pick the wrong drug...');
+    await wait(1000);
+    await stage.tap(stage.blank(0), { hold: 700 });
+    await stage.choose('Phenformin', { hold: 900 });
+    stage.back(); stage.hideCursor();
+    await stage.say('...and the back shows your pick <b>struck through</b> next to the right answer.');
+    await wait(3400);
+  } },
+
+  { id: 'syntax', title: 'Write choices inside the cloze', run: async () => {
+    stage.setNote({ text: '' }, 1);
+    $('src').innerHTML = '';
+    reviewer.show({ 'Text': '' }, 1, true);
+    await stage.say('Put the distractors after the answer, separated by <b>;;</b>');
+    await wait(600);
+    const text = '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes.';
+    await stage.type(text);
+    stage.setNote(Object.assign({}, DRUG_SHORT, { text }), 1); stage.front();
+    await stage.say('The first item is the answer. Choices are <b>shuffled every review</b>.');
+    await wait(1200);
+    await stage.tap(stage.blank(0), { hold: 2600 });
+  } },
+
+  { id: 'nested', title: 'Nested clozes just work', run: async () => {
+    stage.setNote(DRUG, 2); stage.front();
+    await stage.say('Card <b>c2</b> asks for the whole phrase. Long choices stack as rows.');
+    await wait(1400);
+    await stage.tap(stage.blank(0), { hold: 1600 });
+    await stage.choose('reduces hepatic gluconeogenesis', { hold: 700 });
+    stage.setNote(DRUG, 3); stage.front(); stage.hideCursor();
+    await stage.say('Card <b>c3</b>, nested inside it, gets only its own choices. The outer list never leaks.');
+    await wait(1600);
+    await stage.tap(stage.blank(0), { hold: 2400 });
+  } },
+
+  { id: 'per-blank', title: 'Every blank graded on its own', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('Two blanks, same cloze number. Each one has <b>its own choices</b>.');
+    await wait(1500);
+    await stage.tap(stage.blank(0), { hold: 600 });
+    await stage.choose('K+', { hold: 500 });
+    await stage.tap(stage.blank(1), { hold: 600 });
+    await stage.choose('Na+', { hold: 700 });
+    stage.back(); stage.hideCursor();
+    await stage.say('Swap them and it is <b>wrong</b>. Order matters, so it is graded per blank.');
+    await wait(3400);
+  } },
+
+  { id: 'honest-recall', title: 'Recall some, pick others', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('Recall the first blank yourself. Only open the one you are stuck on.');
+    await wait(1800);
+    await stage.tap(stage.blank(1), { hold: 600 });
+    await stage.choose('K+', { hold: 700 });
+    stage.back(); stage.hideCursor();
+    await stage.say('Only picks are graded. Blanks you recalled are <b>yours to grade honestly</b>.');
+    await wait(3400);
+  } },
+
+  { id: 'no-lists', title: 'No lists? Blanks borrow each other', run: async () => {
+    stage.setNote(GLYCOLYSIS, 1); stage.front();
+    await stage.say('No <b>;;</b> anywhere. Each blank borrows the <b>other answers</b> on the card as choices.');
+    await wait(1600);
+    await stage.tap(stage.blank(1), { hold: 2600 });
+  } },
+
+  { id: 'plain-cloze', title: 'Your old clozes still work', run: async () => {
+    stage.setNote(CANBERRA, 1); stage.front();
+    await stage.say('A blank with nothing to offer stays <b>plain blue</b>, exactly like Anki\'s own cloze.');
+    await wait(2600);
+    await stage.say('Migrate your existing cloze notes with Change Note Type. Add <b>;;</b> whenever you want.');
+    await wait(1200);
+    stage.back();
+    await wait(2400);
+  } },
+
+  { id: 'keyboard', title: 'Keyboard friendly', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('<b>Tab</b> opens the next blank, <b>1 to 9</b> picks, <b>Esc</b> closes.');
+    await wait(1200);
+    const pickKey = name => { const i = [...stage.doc().querySelectorAll('#cmcq-panel button')].findIndex(b => b.textContent.replace(/^\d/, '') === name); return String(i + 1); };
+    await stage.key('Tab', { key: 'Tab', code: 'Tab' });
+    await wait(500);
+    let k = pickKey('Na+'); await stage.key(k, { key: k, code: 'Digit' + k });
+    await stage.key('Tab', { key: 'Tab', code: 'Tab' });
+    await wait(500);
+    k = pickKey('K+'); await stage.key(k, { key: k, code: 'Digit' + k });
+    await wait(400);
+    stage.back();
+    await stage.say('No mouse needed.');
+    await wait(2400);
+  } },
+
+  { id: 'anking-fields', title: 'Every AnKing field, AnKing-style', run: async () => {
+    stage.setNote(ANKING, 1); stage.back();
+    await stage.say('Lecture Notes, Pixorize, First Aid and the rest come over by name. <b>Nothing is lost.</b>');
+    await wait(2000);
+    await stage.tap(stage.resource('Lecture Notes'), { hold: 900 });
+    await stage.tap(stage.resource('Pixorize'), { hold: 900 });
+    await stage.say('Same buttons, same shortcuts. Links and images show <b>exactly as written</b>.');
+    await stage.key('Alt + 2', { key: '2', code: 'Digit2', altKey: true });
+    await wait(1800);
+  } },
+
+  { id: 'night-mode', title: 'Night mode', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.night(true); stage.front();
+    await stage.say('Follows Anki\'s night mode.');
+    await wait(1500);
+    await stage.tap(stage.blank(0), { hold: 700 });
+    await stage.choose('Metformin', { hold: 600 });
+    stage.back(); stage.hideCursor();
+    await wait(2400);
+  } },
+
+  { id: 'outro', title: '', run: async () => {
+    stage.setNote(DRUG_SHORT, 1, { showSource: false }); stage.front();
+    await stage.titleCard('Clozed <span>MCQ</span>', 'Free and open source. Import one .apkg and go.', 'github.com/anki-boi/Clozed-MCQ');
+    await wait(4200);
+  } },
+];
+
+// Plays one scene; record.mjs calls this and captures the screen around it
+async function play(i) {
+  const s = SCENES[i];
+  const numbered = SCENES.filter(x => x.title);
+  stage.reset(numbered.indexOf(s) + 1, numbered.length, s.title);
+  await s.run();
+}
+
+const reviewer = mountReviewer(frame, () => {
+  // Stage only: keep content clear of the phone's rounded corners and a little larger for video
+  const s = frame.contentDocument.createElement('style');
+  s.textContent = 'body.card { padding-top: 40px; zoom: 1.1; } .cmcq-check { top: 12px; left: 22px; }';
+  frame.contentDocument.head.appendChild(s);
+  window.stageReady = true;
+});
+window.SCENE_IDS = SCENES.map(s => s.id);
+
+// Open the page in a browser and press Space to watch every scene in a row
+document.addEventListener('keydown', async e => {
+  if (e.code !== 'Space' || window.playing) return;
+  window.playing = true;
+  for (let i = 0; i < SCENES.length; i++) await play(i);
+  window.playing = false;
+});
+</script>
+</body>
+</html>

@@ -8,6 +8,62 @@ Companion to [True-Anki-MCQ-Note-Template](https://github.com/anki-boi/True-Anki
 
 > **Status: early.** The templates are tested in the preview harness in this repo, which copies Anki's cloze output. They have not been tested inside Anki desktop, AnkiMobile or AnkiDroid yet.
 
+![Recall first, tap a glowing blank when stuck](demos/gifs/01-recall-first.gif)
+
+## See it in action
+
+Every clip is recorded from the real templates in this repo. Full walkthrough: [`demos/videos/all-features.mp4`](demos/videos/all-features.mp4) (2 min 23 s).
+
+<details><summary><b>Wrong picks stay visible</b></summary>
+
+![Wrong pick struck through on the back](demos/gifs/02-wrong-pick.gif)
+</details>
+
+<details><summary><b>Write choices inside the cloze with ;;</b></summary>
+
+![Typing a cloze with ;; distractors](demos/gifs/03-syntax.gif)
+</details>
+
+<details><summary><b>Nested clozes</b></summary>
+
+![Outer and inner cloze each get their own choices](demos/gifs/04-nested.gif)
+</details>
+
+<details><summary><b>Every blank graded on its own</b></summary>
+
+![Swapping two answers is marked wrong](demos/gifs/05-per-blank.gif)
+</details>
+
+<details><summary><b>Recall some blanks, pick others</b></summary>
+
+![Only picked blanks are graded](demos/gifs/06-honest-recall.gif)
+</details>
+
+<details><summary><b>No lists? Blanks borrow each other</b></summary>
+
+![Blanks without ;; use the other answers as choices](demos/gifs/07-no-lists.gif)
+</details>
+
+<details><summary><b>Your old clozes still work</b></summary>
+
+![A plain cloze renders like Anki's own](demos/gifs/08-plain-cloze.gif)
+</details>
+
+<details><summary><b>Keyboard</b></summary>
+
+![Tab, number keys and Esc](demos/gifs/09-keyboard.gif)
+</details>
+
+<details><summary><b>Every AnKing field, AnKing-style buttons</b></summary>
+
+![Lecture Notes, Pixorize and other fields as buttons](demos/gifs/10-anking-fields.gif)
+</details>
+
+<details><summary><b>Night mode</b></summary>
+
+![The card in Anki's night mode](demos/gifs/11-night-mode.gif)
+</details>
+
 ## Writing choices
 
 Put the distractors inside the cloze, after the answer, separated by `;;`:
@@ -122,6 +178,17 @@ python build.py
 This writes `front.html`, `back.html`, `dist/Clozed-MCQ.apkg` (needs `pip install genanki`) and `preview/preview.html`. The field list lives in `build.py`, and the build stops if a template names a field the note type does not have. Open the preview in a browser to try the templates against sample notes, switch cards, flip sides, and toggle night mode and phone width. It behaves like Anki desktop: one page, card HTML swapped in, scripts re-run.
 
 `samples/cloze-render-samples.html` is the design exploration that led to this behaviour.
+
+### Demo videos
+
+The clips in `demos/` come from `demos/stage.html`, which runs the built templates inside a phone frame with captions. Each feature is a scripted scene in `demos/stage.src.html`. To re-record after a change:
+
+```bash
+python build.py
+node demos/record.mjs
+```
+
+This needs Chrome (or Chromium) and ffmpeg, and no npm packages. Pass scene names to record only those, for example `node demos/record.mjs nested keyboard`. Open `demos/stage.html` in a browser and press Space to watch the scenes live.
 
 ## Acknowledgements
 

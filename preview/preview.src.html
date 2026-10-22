@@ -79,86 +79,11 @@ const NOTES = [
     text: '<b>{{c1,2::Atropine;;Pilocarpine;;Neostigmine}}</b> is a {{c2::<i>muscarinic antagonist</i>;;nicotinic agonist;;cholinesterase inhibitor}}.' },
 ];
 
-// ---- Simulated Anki cloze renderer (mirrors rslib/src/cloze.rs output) ----
-const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/* @ANKISIM@ */
 
-function parseNote(src) {
-  const root = { kids: [] }, stack = [root];
-  let i = 0, buf = '';
-  const flush = () => { if (buf) { stack[stack.length - 1].kids.push(buf); buf = ''; } };
-  while (i < src.length) {
-    const m = src.slice(i).match(/^\{\{c(\d+(?:,\d+)*)::/);
-    if (m) {
-      flush();
-      const node = { ords: m[1].split(',').map(Number), kids: [] };
-      stack[stack.length - 1].kids.push(node); stack.push(node);
-      i += m[0].length; continue;
-    }
-    if (src.startsWith('}}', i) && stack.length > 1) {
-      flush();
-      const node = stack.pop();
-      if (typeof node.kids[0] === 'string') {
-        const k = node.kids[0].indexOf('::');
-        if (k >= 0) { node.hint = node.kids[0].slice(k + 2); node.kids[0] = node.kids[0].slice(0, k); }
-      }
-      i += 2; continue;
-    }
-    buf += src[i++];
-  }
-  flush();
-  return root.kids;
-}
-
-function ordsOf(nodes, out = new Set()) {
-  nodes.forEach(n => { if (typeof n !== 'string') { n.ords.forEach(o => out.add(o)); ordsOf(n.kids, out); } });
-  return [...out].sort((a, b) => a - b);
-}
-
-function renderNodes(nodes, ord, question) {
-  return nodes.map(n => typeof n === 'string' ? n : renderCloze(n, ord, question)).join('');
-}
-
-function renderCloze(n, ord, question) {
-  const active = n.ords.includes(ord);
-  const inner = renderNodes(n.kids, ord, question);
-  if (active && question) return `<span class="cloze" data-cloze="${esc(inner)}" data-ordinal="${ord}">[${n.hint ?? '...'}]</span>`;
-  if (active) return `<span class="cloze" data-ordinal="${ord}">${inner}</span>`;
-  return `<span class="cloze-inactive" data-ordinal="${n.ords[0]}">${inner}</span>`;
-}
-
-// ---- Anki-style field substitution ----
-function renderTemplate(tpl, fields, ord, question) {
-  tpl = tpl.replace(/\{\{([#^])([^}]+)\}\}([\s\S]*?)\{\{\/\2\}\}/g, (_, kind, name, body) => {
-    const filled = (fields[name.trim()] || '').trim() !== '';
-    return (kind === '#') === filled ? body : '';
-  });
-  return tpl.replace(/\{\{([^}]+)\}\}/g, (_, ref) => {
-    const m = ref.match(/^cloze:(.+)$/);
-    if (m) return renderNodes(parseNote(fields[m[1].trim()] || ''), ord, question);
-    const name = ref.trim();
-    // Anki refuses a template that names a field the note type does not have
-    if (!TEMPLATES.fields.includes(name) && name !== 'Tags') throw new Error(`Template names "${name}", which is not a field`);
-    return fields[name] ?? '';
-  });
-}
-
-// ---- The fake Anki reviewer: one page, card HTML swapped in, scripts re-run ----
 const frame = document.getElementById('anki');
 let night = false;
-frame.srcdoc = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<style>${TEMPLATES.css}</style></head><body class="card"><div id="qa"></div>
-<script>
-window.py = {};   // Anki desktop exposes this; anki-persistence stores picks on it
-window.setQA = function (html) {
-  var qa = document.getElementById('qa');
-  qa.innerHTML = html;
-  qa.querySelectorAll('script').forEach(function (old) {
-    var s = document.createElement('script');
-    s.textContent = old.textContent;
-    old.replaceWith(s);
-  });
-};
-<\/script></body></html>`;
+const reviewer = mountReviewer(frame, () => { loadNote(); show(true); });
 
 const $ = id => document.getElementById(id);
 NOTES.forEach((n, i) => $('note').add(new Option(n.name, i)));
@@ -188,7 +113,7 @@ function show(question) {
   const unknown = Object.keys(fields).filter(f => f !== 'Tags' && !TEMPLATES.fields.includes(f));
   const ord = +$('ord').value;
   try {
-    frame.contentWindow.setQA(renderTemplate(question ? TEMPLATES.front : TEMPLATES.back, fields, ord, question));
+    reviewer.show(fields, ord, question);
     $('status').textContent = (question ? 'Question' : 'Answer') + ' side, card ' + ord +
       (unknown.length ? '. Not fields of this note type: ' + unknown.join(', ') : '');
   } catch (err) {
@@ -201,13 +126,8 @@ $('text').oninput = refreshOrds;
 $('ord').onchange = () => show(true);
 $('showFront').onclick = () => show(true);
 $('showBack').onclick = () => show(false);
-$('night').onclick = () => {
-  night = !night;
-  frame.contentDocument.body.className = 'card' + (night ? ' nightMode night_mode' : '');
-};
+$('night').onclick = () => { night = !night; reviewer.night(night); };
 $('phone').onclick = () => frame.classList.toggle('phone');
-
-frame.onload = () => { loadNote(); show(true); };
 </script>
 </body>
 </html>

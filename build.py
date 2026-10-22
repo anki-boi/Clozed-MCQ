@@ -137,9 +137,13 @@ def main() -> None:
         {"front": built["front"], "back": built["back"], "css": css, "fields": FIELDS},
         ensure_ascii=False,
     ).replace("</", "<\\/")
-    preview = fill(read(ROOT / "preview" / "preview.src.html"), {"/* @TEMPLATES@ */": f"const TEMPLATES = {payload};"})
-    (ROOT / "preview" / "preview.html").write_text(preview, encoding="utf-8", newline="\n")
-    print("built preview/preview.html")
+    sim = {
+        "/* @TEMPLATES@ */": f"const TEMPLATES = {payload};",
+        "/* @ANKISIM@ */": read(ROOT / "preview" / "anki-sim.js"),
+    }
+    for page in ("preview/preview", "demos/stage"):
+        (ROOT / f"{page}.html").write_text(fill(read(ROOT / f"{page}.src.html"), sim), encoding="utf-8", newline="\n")
+        print(f"built {page}.html")
 
 
 if __name__ == "__main__":

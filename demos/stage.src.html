@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>Clozed MCQ Demos</title>
+<style>
+  :root { --bg: #0f1115; --ink: #f2f2ee; --muted: #9a9ca3; --accent: #fb923c; --panel: #181b22; --line: #2a2e38; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+  #stage { position: relative; width: 1280px; height: 720px; overflow: hidden;
+           background: radial-gradient(900px 500px at 15% 10%, #1d2230 0%, transparent 60%),
+                       radial-gradient(700px 500px at 90% 90%, #2a1a12 0%, transparent 60%), var(--bg); }
+  .left { position: absolute; left: 72px; top: 64px; width: 600px; bottom: 56px; display: flex; flex-direction: column; }
+  .brand { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .brand span { color: var(--muted); font-weight: 600; margin-left: 10px; letter-spacing: .08em; }
+  h1 { font-size: 44px; line-height: 1.12; margin: 18px 0 0; font-weight: 750; letter-spacing: -.01em; }
+  .say { margin-top: 22px; font-size: 24px; line-height: 1.45; color: #d9d9d4; min-height: 106px; transition: opacity .25s ease; }
+  .say b { color: var(--accent); font-weight: 650; }
+  .say.out { opacity: 0; }
+  .source { margin-top: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; }
+  .source .label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .source pre { margin: 0; font: 16px/1.55 Consolas, "Cascadia Mono", Menlo, monospace; white-space: pre-wrap; word-break: break-word; color: #e6e6e1; min-height: 50px; }
+  .source .ord { color: #7aa2ff; }
+  .source .sep { color: var(--accent); font-weight: 700; }
+  .source .brace { color: #6b7080; }
+  .source .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .source.hidden { visibility: hidden; }
+
+  .phone { position: absolute; right: 120px; top: 28px; width: 392px; height: 664px; border-radius: 44px; padding: 14px;
+           background: #05060a; box-shadow: 0 0 0 2px #2b2f3a, 0 30px 80px rgba(0,0,0,.55); }
+  .phone iframe { width: 364px; height: 636px; border: 0; border-radius: 32px; background: white; display: block; }
+  .tag { position: absolute; right: 120px; width: 392px; bottom: 10px; text-align: center; font-size: 13px; color: var(--muted); }
+
+  #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,.95); background: rgba(255,255,255,.08);
+            box-shadow: 0 2px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.35);
+            transform: var(--pos, translate(1000px, 700px));
+            transition: transform .65s cubic-bezier(.3,.7,.2,1), opacity .3s; opacity: 0; z-index: 10; pointer-events: none; }
+  #cursor.down { transform: var(--pos) scale(.8); }
+  .ripple { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid var(--accent);
+            animation: ripple .6s ease-out forwards; z-index: 9; pointer-events: none; }
+  @keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+  #keys { position: absolute; right: 120px; width: 392px; top: 600px; display: flex; justify-content: center; gap: 8px; z-index: 11; pointer-events: none; }
+  .keycap { min-width: 54px; padding: 10px 14px; border-radius: 10px; background: #f4f4f0; color: #111; text-align: center;
+            font: 700 20px/1 "Segoe UI", system-ui, sans-serif; box-shadow: 0 4px 0 #b9b9b2, 0 10px 24px rgba(0,0,0,.4);
+            animation: key 1.1s ease forwards; }
+  @keyframes key { 0% { transform: translateY(8px); opacity: 0; } 12% { transform: none; opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* Title cards */
+  #card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+          background: inherit; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+  #card.on { opacity: 1; }
+  #card .big { font-size: 64px; font-weight: 800; letter-spacing: -.02em; }
+  #card .big span { color: var(--accent); }
+  #card .sub { margin-top: 16px; font-size: 26px; color: #d0d0ca; max-width: 900px; line-height: 1.4; }
+  #card .url { margin-top: 34px; font: 600 24px/1 Consolas, monospace; color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="left">
+    <div class="brand">Clozed MCQ<span id="step"></span></div>
+    <h1 id="title"></h1>
+    <div class="say" id="say"></div>
+    <div class="source" id="source"><div class="label">Text field</div><pre id="src"></pre></div>
+  </div>
+  <div class="phone"><iframe id="anki" title="Anki card"></iframe></div>
+  <div class="tag">Rendered by the real Clozed MCQ templates</div>
+  <div id="keys"></div>
+  <div id="cursor"></div>
+  <div id="card"><div class="big" id="cardBig"></div><div class="sub" id="cardSub"></div><div class="url" id="cardUrl"></div></div>
+</div>
+
+<script>
+/* @TEMPLATES@ */
+</script>
+<script>
+/* @ANKISIM@ */
+</script>
+<script>
+// =====================================================================
+// Stage controls used by the scenes
+// =====================================================================
+const $ = id => document.getElementById(id);
+const frame = $('anki');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let note = {}, ord = 1, cursorPos = { x: 1000, y: 700 };
+
+function highlight(src) {
+  return esc(src)
+    .replace(/\{\{(c\d+(?:,\d+)*)::/g, '<span class="brace">{{</span><span class="ord">$1</span><span class="brace">::</span>')
+    .replace(/\}\}/g, '<span class="brace">}}</span>')
+    .replace(/;;/g, '<span class="sep">;;</span>');
+}
+
+const stage = {
+  async say(html) {
+    const el = $('say');
+    if (el.innerHTML === html) return;
+    el.classList.add('out'); await wait(220);
+    el.innerHTML = html; el.classList.remove('out');
+  },
+  setNote(n, cardOrd = 1, { showSource = true } = {}) {
+    note = n; ord = cardOrd;
+    $('src').innerHTML = highlight(n.text);
+    $('source').classList.toggle('hidden', !showSource);
+  },
+  fields() {
+    return Object.assign({ 'Text': note.text, 'Back Extra': note.extra || '', 'Tags': note.tags || '' }, note.more || {});
+  },
+  front() { reviewer.show(stage.fields(), ord, true); frame.contentWindow.scrollTo(0, 0); },
+  back() { reviewer.show(stage.fields(), ord, false); frame.contentWindow.scrollTo(0, 0); },
+  night(on) { reviewer.night(on); },
+  doc() { return frame.contentDocument; },
+
+  async type(text, cps = 26) {
+    $('source').classList.remove('hidden');
+    for (let i = 0; i <= text.length; i++) {
+      $('src').innerHTML = highlight(text.slice(0, i)) + '<span class="caret"></span>';
+      await wait(1000 / cps);
+    }
+    $('src').innerHTML = highlight(text);
+  },
+
+  // Moves the on-screen cursor to an element inside the card, taps, and clicks it
+  async tap(target, { hold = 250 } = {}) {
+    const el = typeof target === 'string' ? stage.doc().querySelector(target) : target;
+    if (!el) throw new Error('tap target missing: ' + target);
+    el.scrollIntoView({ block: 'nearest' });
+    await wait(60);
+    const f = frame.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const x = f.left + r.left + Math.min(r.width / 2, 60), y = f.top + r.top + r.height / 2;
+    const c = $('cursor');
+    c.style.opacity = 1;
+    c.style.setProperty('--pos', `translate(${x}px, ${y}px)`);
+    cursorPos = { x, y };
+    await wait(700);
+    c.classList.add('down');
+    const rip = document.createElement('div');
+    rip.className = 'ripple'; rip.style.left = x + 'px'; rip.style.top = y + 'px';
+    $('stage').appendChild(rip); setTimeout(() => rip.remove(), 700);
+    el.click();
+    await wait(160); c.classList.remove('down');
+    await wait(hold);
+  },
+  // Taps the choice button whose text matches
+  async choose(text, opts) {
+    const btn = [...stage.doc().querySelectorAll('#cmcq-panel button')].find(b => b.textContent.replace(/^\d/, '').trim() === text);
+    return stage.tap(btn, opts);
+  },
+  blank(i = 0) { return stage.doc().querySelectorAll('.cloze[data-cloze]')[i]; },
+  resource(name) { return stage.doc().querySelector(`.cmcq-res[data-name="${name}"] .cmcq-res-btn`); },
+  hideCursor() { $('cursor').style.opacity = 0; },
+
+  // Shows a keycap and sends the key to the card
+  async key(label, init) {
+    const cap = document.createElement('div');
+    cap.className = 'keycap'; cap.textContent = label;
+    $('keys').innerHTML = ''; $('keys').appendChild(cap);
+    stage.hideCursor();
+    await wait(180);
+    const w = frame.contentWindow;
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', Object.assign({ bubbles: true }, init)));
+    await wait(750);
+  },
+
+  async titleCard(big, sub, url = '') {
+    $('cardBig').innerHTML = big; $('cardSub').innerHTML = sub; $('cardUrl').textContent = url;
+    $('card').classList.add('on');
+  },
+  reset(n, total, title) {
+    $('card').classList.remove('on');
+    $('step').textContent = n ? `${n} / ${total}` : '';
+    $('title').innerHTML = title || '';
+    $('say').innerHTML = '';
+    $('keys').innerHTML = '';
+    stage.hideCursor();
+    stage.night(false);
+  },
+};
+
+// =====================================================================
+// Notes used in the demos
+// =====================================================================
+const DRUG = {
+  text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes because it {{c2::reduces hepatic {{c3::gluconeogenesis;;glycogenolysis;;lipolysis;;ketogenesis}};;increases insulin release;;slows gastric emptying;;blocks renal glucose reabsorption}}.',
+  extra: 'Metformin activates AMPK and lowers hepatic glucose output.',
+};
+const DRUG_SHORT = {
+  text: '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes.',
+  extra: 'Metformin activates AMPK and lowers hepatic glucose output.',
+};
+const PUMP = {
+  text: 'The Na+/K+ ATPase pumps 3 {{c1::Na+;;K+;;Ca2+;;Cl-}} out and 2 {{c1::K+;;Na+;;H+}} in per ATP.',
+  extra: 'Net result: the cell interior becomes more negative.',
+};
+const GLYCOLYSIS = {
+  text: 'Glycolysis: glucose is phosphorylated by {{c1::hexokinase}}, rearranged by {{c1::phosphoglucose isomerase}}, then committed by {{c1::phosphofructokinase-1}}.',
+};
+const CANBERRA = { text: '{{c1::Canberra}} was founded in {{c2::1913}}.', extra: 'An ordinary cloze note, migrated as is.' };
+const ANKING = Object.assign({}, DRUG_SHORT, {
+  more: {
+    'Lecture Notes': 'Biguanides are first-line unless eGFR is below 30. <a href="#">Lecture 12 slides</a>',
+    'Missed Questions': 'Q42: picked a sulfonylurea instead of metformin.',
+    'Pixorize': '<a href="#">Metformin: the "met-forming" factory</a>',
+    'First Aid': 'FA 2026, p. 362',
+  },
+});
+
+// =====================================================================
+// Scenes: one per feature. Each one is recorded as its own clip.
+// =====================================================================
+const SCENES = [
+  { id: 'intro', title: '', run: async () => {
+    stage.setNote(DRUG_SHORT, 1, { showSource: false }); stage.front();
+    await stage.titleCard('Clozed <span>MCQ</span>', 'Multiple choice hidden behind your Anki cloze deletions.<br>Recall first. Tap only when you are stuck.');
+    await wait(3600);
+  } },
+
+  { id: 'recall-first', title: 'Recall first, tap when stuck', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.front();
+    await stage.say('Every card starts as a <b>normal cloze</b>. Try to recall the answer first.');
+    await wait(2600);
+    await stage.say('An <b>orange, glowing</b> blank has choices behind it. Tap it when you need them.');
+    await wait(1800);
+    await stage.tap(stage.blank(0), { hold: 900 });
+    await stage.say('Pick one. The blank fills in.');
+    await stage.choose('Metformin', { hold: 900 });
+    await stage.say('Flip the card: your pick is graded.');
+    await wait(500); stage.back(); stage.hideCursor();
+    await wait(2600);
+  } },
+
+  { id: 'wrong-pick', title: 'Wrong picks stay visible', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.front();
+    await stage.say('Pick the wrong drug...');
+    await wait(1000);
+    await stage.tap(stage.blank(0), { hold: 700 });
+    await stage.choose('Phenformin', { hold: 900 });
+    stage.back(); stage.hideCursor();
+    await stage.say('...and the back shows your pick <b>struck through</b> next to the right answer.');
+    await wait(3400);
+  } },
+
+  { id: 'syntax', title: 'Write choices inside the cloze', run: async () => {
+    stage.setNote({ text: '' }, 1);
+    $('src').innerHTML = '';
+    reviewer.show({ 'Text': '' }, 1, true);
+    await stage.say('Put the distractors after the answer, separated by <b>;;</b>');
+    await wait(600);
+    const text = '{{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes.';
+    await stage.type(text);
+    stage.setNote(Object.assign({}, DRUG_SHORT, { text }), 1); stage.front();
+    await stage.say('The first item is the answer. Choices are <b>shuffled every review</b>.');
+    await wait(1200);
+    await stage.tap(stage.blank(0), { hold: 2600 });
+  } },
+
+  { id: 'nested', title: 'Nested clozes just work', run: async () => {
+    stage.setNote(DRUG, 2); stage.front();
+    await stage.say('Card <b>c2</b> asks for the whole phrase. Long choices stack as rows.');
+    await wait(1400);
+    await stage.tap(stage.blank(0), { hold: 1600 });
+    await stage.choose('reduces hepatic gluconeogenesis', { hold: 700 });
+    stage.setNote(DRUG, 3); stage.front(); stage.hideCursor();
+    await stage.say('Card <b>c3</b>, nested inside it, gets only its own choices. The outer list never leaks.');
+    await wait(1600);
+    await stage.tap(stage.blank(0), { hold: 2400 });
+  } },
+
+  { id: 'per-blank', title: 'Every blank graded on its own', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('Two blanks, same cloze number. Each one has <b>its own choices</b>.');
+    await wait(1500);
+    await stage.tap(stage.blank(0), { hold: 600 });
+    await stage.choose('K+', { hold: 500 });
+    await stage.tap(stage.blank(1), { hold: 600 });
+    await stage.choose('Na+', { hold: 700 });
+    stage.back(); stage.hideCursor();
+    await stage.say('Swap them and it is <b>wrong</b>. Order matters, so it is graded per blank.');
+    await wait(3400);
+  } },
+
+  { id: 'honest-recall', title: 'Recall some, pick others', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('Recall the first blank yourself. Only open the one you are stuck on.');
+    await wait(1800);
+    await stage.tap(stage.blank(1), { hold: 600 });
+    await stage.choose('K+', { hold: 700 });
+    stage.back(); stage.hideCursor();
+    await stage.say('Only picks are graded. Blanks you recalled are <b>yours to grade honestly</b>.');
+    await wait(3400);
+  } },
+
+  { id: 'no-lists', title: 'No lists? Blanks borrow each other', run: async () => {
+    stage.setNote(GLYCOLYSIS, 1); stage.front();
+    await stage.say('No <b>;;</b> anywhere. Each blank borrows the <b>other answers</b> on the card as choices.');
+    await wait(1600);
+    await stage.tap(stage.blank(1), { hold: 2600 });
+  } },
+
+  { id: 'plain-cloze', title: 'Your old clozes still work', run: async () => {
+    stage.setNote(CANBERRA, 1); stage.front();
+    await stage.say('A blank with nothing to offer stays <b>plain blue</b>, exactly like Anki\'s own cloze.');
+    await wait(2600);
+    await stage.say('Migrate your existing cloze notes with Change Note Type. Add <b>;;</b> whenever you want.');
+    await wait(1200);
+    stage.back();
+    await wait(2400);
+  } },
+
+  { id: 'keyboard', title: 'Keyboard friendly', run: async () => {
+    stage.setNote(PUMP, 1); stage.front();
+    await stage.say('<b>Tab</b> opens the next blank, <b>1 to 9</b> picks, <b>Esc</b> closes.');
+    await wait(1200);
+    const pickKey = name => { const i = [...stage.doc().querySelectorAll('#cmcq-panel button')].findIndex(b => b.textContent.replace(/^\d/, '') === name); return String(i + 1); };
+    await stage.key('Tab', { key: 'Tab', code: 'Tab' });
+    await wait(500);
+    let k = pickKey('Na+'); await stage.key(k, { key: k, code: 'Digit' + k });
+    await stage.key('Tab', { key: 'Tab', code: 'Tab' });
+    await wait(500);
+    k = pickKey('K+'); await stage.key(k, { key: k, code: 'Digit' + k });
+    await wait(400);
+    stage.back();
+    await stage.say('No mouse needed.');
+    await wait(2400);
+  } },
+
+  { id: 'anking-fields', title: 'Every AnKing field, AnKing-style', run: async () => {
+    stage.setNote(ANKING, 1); stage.back();
+    await stage.say('Lecture Notes, Pixorize, First Aid and the rest come over by name. <b>Nothing is lost.</b>');
+    await wait(2000);
+    await stage.tap(stage.resource('Lecture Notes'), { hold: 900 });
+    await stage.tap(stage.resource('Pixorize'), { hold: 900 });
+    await stage.say('Same buttons, same shortcuts. Links and images show <b>exactly as written</b>.');
+    await stage.key('Alt + 2', { key: '2', code: 'Digit2', altKey: true });
+    await wait(1800);
+  } },
+
+  { id: 'night-mode', title: 'Night mode', run: async () => {
+    stage.setNote(DRUG_SHORT, 1); stage.night(true); stage.front();
+    await stage.say('Follows Anki\'s night mode.');
+    await wait(1500);
+    await stage.tap(stage.blank(0), { hold: 700 });
+    await stage.choose('Metformin', { hold: 600 });
+    stage.back(); stage.hideCursor();
+    await wait(2400);
+  } },
+
+  { id: 'outro', title: '', run: async () => {
+    stage.setNote(DRUG_SHORT, 1, { showSource: false }); stage.front();
+    await stage.titleCard('Clozed <span>MCQ</span>', 'Free and open source. Import one .apkg and go.', 'github.com/anki-boi/Clozed-MCQ');
+    await wait(4200);
+  } },
+];
+
+// Plays one scene; record.mjs calls this and captures the screen around it
+async function play(i) {
+  const s = SCENES[i];
+  const numbered = SCENES.filter(x => x.title);
+  stage.reset(numbered.indexOf(s) + 1, numbered.length, s.title);
+  await s.run();
+}
+
+const reviewer = mountReviewer(frame, () => {
+  // Stage only: keep content clear of the phone's rounded corners and a little larger for video
+  const s = frame.contentDocument.createElement('style');
+  s.textContent = 'body.card { padding-top: 40px; zoom: 1.1; } .cmcq-check { top: 12px; left: 22px; }';
+  frame.contentDocument.head.appendChild(s);
+  window.stageReady = true;
+});
+window.SCENE_IDS = SCENES.map(s => s.id);
+
+// Open the page in a browser and press Space to watch every scene in a row
+document.addEventListener('keydown', async e => {
+  if (e.code !== 'Space' || window.playing) return;
+  window.playing = true;
+  for (let i = 0; i < SCENES.length; i++) await play(i);
+  window.playing = false;
+});
+</script>
+</body>
+</html>
