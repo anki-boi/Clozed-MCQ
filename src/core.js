@@ -6,8 +6,9 @@ window.ClozedMCQ = (function () {
   // --- CONFIGURATION ---
   // ===================================================================
 
-  // Separates the answer from its distractors inside a cloze:
-  // {{c1::Metformin;;Phenformin;;Buformin}}
+  // Separates the answer from its distractors inside a cloze, as in
+  // c1::Metformin;;Phenformin;;Buformin
+  // (No double curly braces anywhere in this script: Anki reads them as field tags.)
   var LIST = ';;';
 
   // Options longer than this many characters stack as full-width rows.
