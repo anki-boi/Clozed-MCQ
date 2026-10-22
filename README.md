@@ -130,7 +130,11 @@ The keys are set at the top of the front template script. Anki desktop binds 1 t
 | Text | The cloze sentence, with `;;` choice lists |
 | Back Extra | Under the answer, always |
 | Lecture Notes, Missed Questions, Pathoma, Boards and Beyond, First Aid, Sketchy, Sketchy 2, Sketchy Extra, Picmonic, Pixorize, Physeo, Bootcamp, OME, Additional Resources | As buttons on the back, only when the field has content |
+| Netters, Robbins, Atlas, Step Up to Medicine, UWorld, Other Reference | As buttons on the back, only when the field has content |
 | One by one | Not shown. Kept so AnKing notes keep the value when migrated |
+| Note ID | Not shown. Kept so decks that track notes by ID keep it when migrated |
+
+`Text` stays the first field, so Anki's duplicate check and Browse sorting work on the cloze text. If a deck you migrate from had `Note ID` first and its maintainer updates notes by CSV import, those updates matched on the first field; keep that in mind before importing their updates into this note type.
 
 The resource fields copy the names and behaviour of the [AnKing note type](https://github.com/AnKingMed/AnKing-Note-Types). Each one is a button that opens in place and shows the field exactly as written, so links, images and formatting come through as they do in AnKing.
 
@@ -153,7 +157,8 @@ Not carried over from AnKing: the tag-based "Boards and Beyond Links" and "First
 | From | What happens |
 |---|---|
 | Anki Cloze | Text and Back Extra match by name |
-| AnKingOverhaul | Every field matches by name; AnKing's Extra lands in Back Extra |
+| AnKingOverhaul, older AnKing versions | Every field matches by name; Extra lands in Back Extra |
+| Reference-style decks (Note ID, Extra, First Aid, Netters, Robbins, Atlas, Step Up to Medicine, UWorld, Other Reference) | Every field matches by name; Extra lands in Back Extra |
 | Cloze Overlapper | Check the dialog: map Original to Text and Remarks to Back Extra |
 | Enhanced Cloze | Check the dialog: map the content field to Text |
 
