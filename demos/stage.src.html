@@ -299,6 +299,7 @@ const SCENES = [
     stage.setNote(GLYCOLYSIS, 1); stage.front();
     await stage.say('No <b>;;</b> anywhere. Each blank borrows the <b>other answers</b> on the card as choices.');
     await wait(1600);
+    await stage.say('Borrowed blanks glow <b>purple</b>, so you can tell them from written choices.');
     await stage.tap(stage.blank(1), { hold: 2600 });
   } },
 

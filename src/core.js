@@ -89,6 +89,7 @@ window.ClozedMCQ = (function () {
   function borrowSiblings(blanks) {
     blanks.forEach(function (b) {
       if (b.distractors.length) return;
+      b.borrowed = true;
       b.distractors = blanks
         .filter(function (o) { return o !== b && norm(o.answer) !== norm(b.answer); })
         .map(function (o) { return o.answer; });

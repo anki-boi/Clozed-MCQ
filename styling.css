@@ -6,6 +6,8 @@
   --cloze: blue;
   --choice: #c2410c;                       /* blank with choices behind it */
   --choice-glow: rgba(234, 88, 12, 0.45);
+  --borrow: #7c3aed;                       /* blank whose choices are borrowed from the other blanks */
+  --borrow-glow: rgba(124, 58, 237, 0.4);
   --ok: #5f9e33;
   --wrong: #F04A32;
   --missed: #a16207;                       /* right answer you missed: dark amber, readable on white */
@@ -29,6 +31,8 @@
   --cloze: lightblue;
   --choice: #fb923c;
   --choice-glow: rgba(251, 146, 60, 0.5);
+  --borrow: #c4b5fd;
+  --borrow-glow: rgba(167, 139, 250, 0.45);
   --ok: #8AC05E;
   --missed: #F4E45F;
   --pill: rgba(255, 255, 255, 0.07);
@@ -72,20 +76,34 @@
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
   50%      { box-shadow: 0 0 10px 2px var(--choice-glow); }
 }
+
+/* --- Same, in purple, when the choices are borrowed from the other blanks --- */
+.cloze.has-choices.borrowed { color: var(--borrow); animation-name: cmcq-pulse-borrow; }
+.cloze.has-choices.borrowed.open { box-shadow: 0 0 0 2px var(--borrow-glow); }
+.cloze.has-choices.borrowed.picked { border-bottom-color: var(--borrow); }
+.cmcq-panel.borrowed .cmcq-label { color: var(--borrow); }
+@keyframes cmcq-pulse-borrow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 10px 2px var(--borrow-glow); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cloze.has-choices { animation: none; box-shadow: 0 0 6px 1px var(--choice-glow); }
+  .cloze.has-choices.borrowed { box-shadow: 0 0 6px 1px var(--borrow-glow); }
 }
 
 /* --- Choices panel --- */
 .cmcq-panel { margin: 1vh auto 0; max-width: 640px; }
 .cmcq-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-family: system-ui, sans-serif; }
-.cmcq-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.cmcq-options { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+/* Large touch targets: at least 56px tall, two per row */
 .cmcq-options button {
   font: inherit;
-  font-size: clamp(15px, 3vmin, 20px);
-  padding: 10px 14px;
+  font-size: 19px;
+  min-height: 56px;
+  padding: 14px 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--pill);
   color: inherit;
   cursor: pointer;
@@ -93,8 +111,9 @@
 }
 .cmcq-options button:hover { background: var(--pill-hover); }
 .cmcq-options button kbd { font: 11px/1 system-ui, sans-serif; opacity: .55; margin-right: 6px; }
+.cmcq-options:not(.rows) button { flex: 1 1 42%; }
 .cmcq-options.rows { flex-direction: column; align-items: stretch; }
-.cmcq-options.rows button { text-align: left; border-radius: 12px; }
+.cmcq-options.rows button { text-align: left; }
 
 /* --- Answer side --- */
 .cloze.cmcq-ok { color: var(--ok); }

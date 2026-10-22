@@ -42,6 +42,7 @@
     if (!b.options) return;
     choosable.push(i);
     b.span.classList.add('has-choices');
+    if (b.borrowed) b.span.classList.add('borrowed');
     b.span.setAttribute('role', 'button');
     b.span.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -55,6 +56,8 @@
     current = i;
     blanks.forEach(function (o, j) { o.span.classList.toggle('open', i === j); });
     var label = blanks.length > 1 ? 'Blank ' + (i + 1) + ' of ' + blanks.length : 'Choose';
+    if (b.borrowed) label += ' · choices borrowed from the other blanks';
+    panel.classList.toggle('borrowed', !!b.borrowed);
     panel.innerHTML = '<div class="cmcq-label">' + label + '</div>' +
       '<div class="cmcq-options' + (C.isLong(b.options) ? ' rows' : '') + '">' +
       b.options.map(function (o, k) {

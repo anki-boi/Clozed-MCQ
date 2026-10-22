@@ -72,7 +72,7 @@ Put the distractors inside the cloze, after the answer, separated by `;;`:
 {{c1::Metformin;;Phenformin;;Buformin;;Glipizide}} is first-line for type 2 diabetes.
 ```
 
-The first item is the answer. Everything after a `;;` is a distractor. Choices are shuffled on every review.
+The first item is the answer. Everything after a `;;` is a distractor. Choices are shuffled on every review and shown as large buttons (56px tall, two per row; long options stack one per row).
 
 | You write | What happens |
 |---|---|
@@ -80,7 +80,7 @@ The first item is the answer. Everything after a `;;` is a distractor. Choices a
 | `{{c1::Metformin;;Phenformin::biguanide}}` | Hint goes after the list and shows as `[biguanide]` |
 | `{{c1::Canberra}}` | No list: a plain cloze blank |
 | `{{c1::Na+;;K+}} out and {{c1::K+;;Na+}} in` | Same number twice: each blank has its own choices and its own grade |
-| `{{c1::hexokinase}} ... {{c1::phosphofructokinase-1}}` | Several blanks, no lists: each blank borrows the other answers on the card |
+| `{{c1::hexokinase}} ... {{c1::phosphofructokinase-1}}` | Several blanks, no lists: each blank borrows the other answers on the card and glows **purple** instead of orange |
 
 ### Nested clozes
 
